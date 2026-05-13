@@ -1,12 +1,11 @@
-import { CheckCircle2, CloudOff, Database, MonitorSmartphone } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { InstallPrompt } from './InstallPrompt';
 
 interface AppHeaderProps {
-  isOffline: boolean;
-  totalTasks: number;
+  onCreateTask: () => void;
 }
 
-export function AppHeader({ isOffline, totalTasks }: AppHeaderProps) {
+export function AppHeader({ onCreateTask }: AppHeaderProps) {
   return (
     <header className="app-header">
       <div className="brand">
@@ -22,21 +21,12 @@ export function AppHeader({ isOffline, totalTasks }: AppHeaderProps) {
         </div>
       </div>
 
-      <div className="status-row" aria-label="应用状态">
-        <span className="status-pill">
-          <Database size={16} aria-hidden="true" />
-          本地存储
-        </span>
+      <div className="status-row" aria-label="任务操作">
         <InstallPrompt />
-        <span className="status-pill">
-          <MonitorSmartphone size={16} aria-hidden="true" />
-          PC / 移动端
-        </span>
-        <span className={isOffline ? 'status-pill warning' : 'status-pill success'}>
-          {isOffline ? <CloudOff size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
-          {isOffline ? '离线可用' : '已就绪'}
-        </span>
-        <span className="task-total">{totalTasks} 项</span>
+        <button className="header-action-button" onClick={onCreateTask} type="button">
+          <Plus size={16} aria-hidden="true" />
+          添加任务
+        </button>
       </div>
     </header>
   );

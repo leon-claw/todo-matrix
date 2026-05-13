@@ -1,13 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { sampleTasks } from '../data/sampleTasks';
 import { loadTasks, saveTasks } from '../lib/localDatabase';
-import type { MatrixTask, TaskMetrics } from '../types';
-
-interface NewTaskInput extends TaskMetrics {
-  title: string;
-  notes: string;
-  showOnAxis: boolean;
-}
+import type { MatrixTask, TaskFormValues, TaskMetrics } from '../types';
 
 const TODO_SORT_WEIGHTS = {
   importance: 1,
@@ -132,7 +126,7 @@ export function useLocalTasks() {
   }, []);
 
   const addTask = useCallback(
-    (input: NewTaskInput) => {
+    (input: TaskFormValues) => {
       const timestamp = new Date().toISOString();
       const nextTask: MatrixTask = {
         id: createId(),
@@ -147,6 +141,28 @@ export function useLocalTasks() {
       };
 
       commit([nextTask, ...tasks]);
+    },
+    [commit, tasks],
+  );
+
+  const updateTask = useCallback(
+    (taskId: string, input: TaskFormValues) => {
+      const timestamp = new Date().toISOString();
+      commit(
+        tasks.map((task) =>
+          task.id === taskId
+            ? {
+                ...task,
+                title: input.title.trim(),
+                notes: input.notes.trim(),
+                importance: clampMetric(input.importance, task.importance),
+                urgency: clampMetric(input.urgency, task.urgency),
+                showOnAxis: input.showOnAxis,
+                updatedAt: timestamp,
+              }
+            : task,
+        ),
+      );
     },
     [commit, tasks],
   );
@@ -223,6 +239,7 @@ export function useLocalTasks() {
     storageError,
     stats,
     addTask,
+    updateTask,
     toggleTask,
     updateTaskMetrics,
     toggleAxisVisibility,

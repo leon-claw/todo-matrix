@@ -5,6 +5,7 @@ import { TaskCard } from './TaskCard';
 interface TodoListProps {
   tasks: MatrixTask[];
   onDeleteTask: (taskId: string) => void;
+  onEditTask: (task: MatrixTask) => void;
   onMetricsChange: (taskId: string, metrics: Partial<TaskMetrics>) => void;
   onToggleAxis: (taskId: string) => void;
   onToggleTask: (taskId: string) => void;
@@ -13,6 +14,7 @@ interface TodoListProps {
 export function TodoList({
   tasks,
   onDeleteTask,
+  onEditTask,
   onMetricsChange,
   onToggleAxis,
   onToggleTask,
@@ -32,6 +34,7 @@ export function TodoList({
         <TaskCard
           key={task.id}
           onDelete={onDeleteTask}
+          onEdit={onEditTask}
           onMetricsChange={onMetricsChange}
           onToggle={onToggleTask}
           onToggleAxis={onToggleAxis}

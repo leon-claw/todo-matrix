@@ -15,4 +15,10 @@ export interface TaskMetrics {
   urgency: number;
 }
 
-export type TaskFilter = 'all' | 'active' | 'completed';
+export interface TaskFormValues extends TaskMetrics {
+  title: string;
+  notes: string;
+  showOnAxis: boolean;
+}
+
+export type TaskFilter = 'all' | 'active' | 'completed' | 'axis';

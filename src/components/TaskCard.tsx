@@ -1,9 +1,20 @@
-import { Check, Circle, Eye, EyeOff, Trash2 } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Eye,
+  EyeOff,
+  Pencil,
+  Trash2,
+} from 'lucide-react';
+import { useState } from 'react';
 import type { MatrixTask, TaskMetrics } from '../types';
 
 interface TaskCardProps {
   task: MatrixTask;
   onDelete: (taskId: string) => void;
+  onEdit: (task: MatrixTask) => void;
   onMetricsChange: (taskId: string, metrics: Partial<TaskMetrics>) => void;
   onToggle: (taskId: string) => void;
   onToggleAxis: (taskId: string) => void;
@@ -12,10 +23,13 @@ interface TaskCardProps {
 export function TaskCard({
   task,
   onDelete,
+  onEdit,
   onMetricsChange,
   onToggle,
   onToggleAxis,
 }: TaskCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <article className={task.completed ? 'task-card completed' : 'task-card'}>
       <button
@@ -29,38 +43,68 @@ export function TaskCard({
       </button>
 
       <div className="task-copy">
-        <h3>{task.title}</h3>
-        {task.notes ? <p>{task.notes}</p> : null}
+        <button
+          aria-expanded={isExpanded}
+          className="task-title-button"
+          onClick={() => setIsExpanded((current) => !current)}
+          type="button"
+        >
+          <h3>{task.title}</h3>
+        </button>
 
-        <div className="task-metrics" aria-label="任务指标">
-          <label>
-            <span>重要 {task.importance}</span>
-            <input
-              max={100}
-              min={0}
-              onChange={(event) =>
-                onMetricsChange(task.id, { importance: Number(event.target.value) })
-              }
-              type="range"
-              value={task.importance}
-            />
-          </label>
-          <label>
-            <span>紧急 {task.urgency}</span>
-            <input
-              max={100}
-              min={0}
-              onChange={(event) =>
-                onMetricsChange(task.id, { urgency: Number(event.target.value) })
-              }
-              type="range"
-              value={task.urgency}
-            />
-          </label>
-        </div>
+        {isExpanded ? (
+          <div className="task-details">
+            {task.notes ? <p>{task.notes}</p> : null}
+
+            <div className="task-metrics" aria-label="任务指标">
+              <label>
+                <span>重要 {task.importance}</span>
+                <input
+                  max={100}
+                  min={0}
+                  onChange={(event) =>
+                    onMetricsChange(task.id, { importance: Number(event.target.value) })
+                  }
+                  type="range"
+                  value={task.importance}
+                />
+              </label>
+              <label>
+                <span>紧急 {task.urgency}</span>
+                <input
+                  max={100}
+                  min={0}
+                  onChange={(event) =>
+                    onMetricsChange(task.id, { urgency: Number(event.target.value) })
+                  }
+                  type="range"
+                  value={task.urgency}
+                />
+              </label>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="task-card-actions">
+        <button
+          aria-label={isExpanded ? '折叠任务' : '展开任务'}
+          className="icon-button"
+          onClick={() => setIsExpanded((current) => !current)}
+          title={isExpanded ? '折叠任务' : '展开任务'}
+          type="button"
+        >
+          {isExpanded ? <ChevronUp size={17} aria-hidden="true" /> : <ChevronDown size={17} aria-hidden="true" />}
+        </button>
+        <button
+          aria-label="编辑任务"
+          className="icon-button"
+          onClick={() => onEdit(task)}
+          title="编辑任务"
+          type="button"
+        >
+          <Pencil size={17} aria-hidden="true" />
+        </button>
         <button
           aria-label={task.showOnAxis ? '从坐标轴隐藏' : '显示在坐标轴上'}
           className={task.showOnAxis ? 'icon-button active' : 'icon-button'}

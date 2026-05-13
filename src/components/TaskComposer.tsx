@@ -1,43 +1,66 @@
-import { Plus } from 'lucide-react';
-import { FormEvent, useState } from 'react';
+import { Save } from 'lucide-react';
+import { FormEvent, useEffect, useState } from 'react';
+import type { MatrixTask, TaskFormValues } from '../types';
 
 interface TaskComposerProps {
-  onAddTask: (task: {
-    title: string;
-    notes: string;
-    importance: number;
-    urgency: number;
-    showOnAxis: boolean;
-  }) => void;
+  initialTask?: MatrixTask | null;
+  mode: 'create' | 'edit';
+  onCancel: () => void;
+  onSubmit: (task: TaskFormValues) => void;
 }
 
-export function TaskComposer({ onAddTask }: TaskComposerProps) {
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const [importance, setImportance] = useState(60);
-  const [urgency, setUrgency] = useState(50);
-  const [showOnAxis, setShowOnAxis] = useState(true);
+const emptyTask: TaskFormValues = {
+  title: '',
+  notes: '',
+  importance: 60,
+  urgency: 50,
+  showOnAxis: true,
+};
+
+function getInitialValues(task?: MatrixTask | null): TaskFormValues {
+  if (!task) {
+    return emptyTask;
+  }
+
+  return {
+    title: task.title,
+    notes: task.notes,
+    importance: task.importance,
+    urgency: task.urgency,
+    showOnAxis: task.showOnAxis,
+  };
+}
+
+export function TaskComposer({
+  initialTask,
+  mode,
+  onCancel,
+  onSubmit,
+}: TaskComposerProps) {
+  const [values, setValues] = useState<TaskFormValues>(() => getInitialValues(initialTask));
+
+  useEffect(() => {
+    setValues(getInitialValues(initialTask));
+  }, [initialTask]);
+
+  function updateValue<Key extends keyof TaskFormValues>(key: Key, value: TaskFormValues[Key]) {
+    setValues((current) => ({ ...current, [key]: value }));
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!title.trim()) {
+    if (!values.title.trim()) {
       return;
     }
 
-    onAddTask({ title, notes, importance, urgency, showOnAxis });
-    setTitle('');
-    setNotes('');
-    setImportance(60);
-    setUrgency(50);
-    setShowOnAxis(true);
+    onSubmit(values);
   }
 
   return (
     <form className="task-composer" onSubmit={handleSubmit}>
       <div>
-        <h2>添加任务</h2>
-        <p>任务会立即保存到此设备，无需账号或网络。</p>
+        <h2>{mode === 'create' ? '添加任务' : '编辑任务'}</h2>
       </div>
 
       <label>
@@ -45,9 +68,9 @@ export function TaskComposer({ onAddTask }: TaskComposerProps) {
         <input
           autoComplete="off"
           maxLength={80}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => updateValue('title', event.target.value)}
           placeholder="例如：完成离线数据方案"
-          value={title}
+          value={values.title}
         />
       </label>
 
@@ -55,49 +78,54 @@ export function TaskComposer({ onAddTask }: TaskComposerProps) {
         <span>备注</span>
         <textarea
           maxLength={180}
-          onChange={(event) => setNotes(event.target.value)}
+          onChange={(event) => updateValue('notes', event.target.value)}
           placeholder="补充上下文、负责人或下一步动作"
           rows={3}
-          value={notes}
+          value={values.notes}
         />
       </label>
 
       <div className="metric-fields" aria-label="任务指标">
         <label>
-          <span>重要程度 {importance}</span>
+          <span>重要程度 {values.importance}</span>
           <input
             max={100}
             min={0}
-            onChange={(event) => setImportance(Number(event.target.value))}
+            onChange={(event) => updateValue('importance', Number(event.target.value))}
             type="range"
-            value={importance}
+            value={values.importance}
           />
         </label>
         <label>
-          <span>紧急程度 {urgency}</span>
+          <span>紧急程度 {values.urgency}</span>
           <input
             max={100}
             min={0}
-            onChange={(event) => setUrgency(Number(event.target.value))}
+            onChange={(event) => updateValue('urgency', Number(event.target.value))}
             type="range"
-            value={urgency}
+            value={values.urgency}
           />
         </label>
       </div>
 
       <label className="axis-checkbox">
         <input
-          checked={showOnAxis}
-          onChange={(event) => setShowOnAxis(event.target.checked)}
+          checked={values.showOnAxis}
+          onChange={(event) => updateValue('showOnAxis', event.target.checked)}
           type="checkbox"
         />
         <span>显示在坐标轴上</span>
       </label>
 
-      <button className="primary-button" disabled={!title.trim()} type="submit">
-        <Plus size={18} aria-hidden="true" />
-        添加任务
-      </button>
+      <div className="modal-actions">
+        <button className="ghost-button" onClick={onCancel} type="button">
+          取消
+        </button>
+        <button className="primary-button" disabled={!values.title.trim()} type="submit">
+          <Save size={18} aria-hidden="true" />
+          {mode === 'create' ? '添加任务' : '保存修改'}
+        </button>
+      </div>
     </form>
   );
 }
