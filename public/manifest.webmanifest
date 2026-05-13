@@ -1,0 +1,19 @@
+{
+  "name": "Todo Matrix",
+  "short_name": "Matrix",
+  "description": "纯前端、离线可用、本地存储的 TODO 坐标轴。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
