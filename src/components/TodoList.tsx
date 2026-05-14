@@ -1,4 +1,5 @@
-import { Inbox } from 'lucide-react';
+import { Paper, Stack, Typography } from '@mui/material';
+import InboxRoundedIcon from '@mui/icons-material/InboxRounded';
 import type { MatrixTask, TaskMetrics } from '../types';
 import { TaskCard } from './TaskCard';
 
@@ -21,15 +22,29 @@ export function TodoList({
 }: TodoListProps) {
   if (!tasks.length) {
     return (
-      <section className="todo-list empty" aria-label="TODO 列表">
-        <Inbox size={28} aria-hidden="true" />
-        <p>暂无任务</p>
-      </section>
+      <Paper
+        aria-label="TODO 列表"
+        component="section"
+        variant="outlined"
+        sx={{
+          alignItems: 'center',
+          color: 'text.secondary',
+          display: 'grid',
+          gap: 1,
+          minHeight: 220,
+          p: 3,
+          placeItems: 'center',
+          textAlign: 'center',
+        }}
+      >
+        <InboxRoundedIcon />
+        <Typography sx={{ fontWeight: 600 }}>暂无任务</Typography>
+      </Paper>
     );
   }
 
   return (
-    <section className="todo-list" aria-label="TODO 列表">
+    <Stack aria-label="TODO 列表" component="section" spacing={1}>
       {tasks.map((task) => (
         <TaskCard
           key={task.id}
@@ -41,6 +56,6 @@ export function TodoList({
           task={task}
         />
       ))}
-    </section>
+    </Stack>
   );
 }

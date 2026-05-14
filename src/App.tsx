@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import { Alert, Box, CircularProgress, Container, Dialog, DialogContent, IconButton, Paper } from '@mui/material';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { AppHeader } from './components/AppHeader';
 import { PriorityAxis } from './components/PriorityAxis';
 import { StatsStrip } from './components/StatsStrip';
@@ -71,14 +72,34 @@ export function App() {
   }
 
   return (
-    <div className="app-shell">
+    <Container maxWidth={false} sx={{ maxWidth: 1480, py: { xs: 2, md: 3 } }}>
       <AppHeader onCreateTask={openCreateTask} />
 
-      <main className="workspace">
+      <Box
+        component="main"
+        sx={{
+          alignItems: 'start',
+          display: 'grid',
+          gap: 2.5,
+          gridTemplateColumns: {
+            xs: '1fr',
+            lg: 'minmax(460px, 0.92fr) minmax(420px, 1.08fr)',
+          },
+        }}
+      >
         <PriorityAxis onMetricsChange={updateTaskMetrics} tasks={tasks} />
 
-        <section className="todo-panel" aria-label="TODO 列表">
-          {storageError ? <p className="storage-error">{storageError}</p> : null}
+        <Paper
+          component="section"
+          aria-label="TODO 列表"
+          variant="outlined"
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            p: { xs: 1.5, md: 2 },
+          }}
+        >
+          {storageError ? <Alert severity="error">{storageError}</Alert> : null}
 
           <StatsStrip
             active={stats.active}
@@ -90,7 +111,21 @@ export function App() {
           />
 
           {isLoading ? (
-            <div className="loading-state">正在读取本地数据...</div>
+            <Paper
+              variant="outlined"
+              sx={{
+                alignItems: 'center',
+                color: 'text.secondary',
+                display: 'flex',
+                gap: 1.5,
+                justifyContent: 'center',
+                minHeight: 280,
+                p: 3,
+              }}
+            >
+              <CircularProgress size={20} />
+              正在读取本地数据...
+            </Paper>
           ) : (
             <TodoList
               onDeleteTask={deleteTask}
@@ -101,36 +136,40 @@ export function App() {
               tasks={visibleTasks}
             />
           )}
-        </section>
-      </main>
+        </Paper>
+      </Box>
 
-      {editorState ? (
-        <div className="modal-backdrop" role="presentation" onMouseDown={closeEditor}>
-          <section
-            aria-label={editorState.mode === 'create' ? '添加任务' : '编辑任务'}
-            aria-modal="true"
-            className="task-modal"
-            onMouseDown={(event) => event.stopPropagation()}
-            role="dialog"
-          >
-            <button
-              aria-label="关闭"
-              className="icon-button modal-close"
-              onClick={closeEditor}
-              title="关闭"
-              type="button"
-            >
-              <X size={18} aria-hidden="true" />
-            </button>
+      <Dialog
+        fullWidth
+        maxWidth="sm"
+        open={Boolean(editorState)}
+        onClose={closeEditor}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+            },
+          },
+        }}
+      >
+        <IconButton
+          aria-label="关闭"
+          onClick={closeEditor}
+          sx={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
+        >
+          <CloseRoundedIcon fontSize="small" />
+        </IconButton>
+        <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          {editorState ? (
             <TaskComposer
               initialTask={editorState.task}
               mode={editorState.mode}
               onCancel={closeEditor}
               onSubmit={handleSubmitTask}
             />
-          </section>
-        </div>
-      ) : null}
-    </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </Container>
   );
 }

@@ -1,4 +1,5 @@
-import { Save } from 'lucide-react';
+import { Box, Button, Checkbox, FormControlLabel, Slider, Stack, TextField, Typography } from '@mui/material';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { FormEvent, useEffect, useState } from 'react';
 import type { MatrixTask, TaskFormValues } from '../types';
 
@@ -58,74 +59,86 @@ export function TaskComposer({
   }
 
   return (
-    <form className="task-composer" onSubmit={handleSubmit}>
-      <div>
-        <h2>{mode === 'create' ? '添加任务' : '编辑任务'}</h2>
-      </div>
+    <Stack component="form" spacing={2.25} onSubmit={handleSubmit}>
+      <Box>
+        <Typography variant="h2">{mode === 'create' ? '添加任务' : '编辑任务'}</Typography>
+      </Box>
 
-      <label>
-        <span>任务标题</span>
-        <input
-          autoComplete="off"
-          maxLength={80}
-          onChange={(event) => updateValue('title', event.target.value)}
-          placeholder="例如：完成离线数据方案"
-          value={values.title}
-        />
-      </label>
+      <TextField
+        autoComplete="off"
+        autoFocus
+        fullWidth
+        label="任务标题"
+        onChange={(event) => updateValue('title', event.target.value)}
+        placeholder="例如：完成离线数据方案"
+        slotProps={{ htmlInput: { maxLength: 80 } }}
+        value={values.title}
+      />
 
-      <label>
-        <span>备注</span>
-        <textarea
-          maxLength={180}
-          onChange={(event) => updateValue('notes', event.target.value)}
-          placeholder="补充上下文、负责人或下一步动作"
-          rows={3}
-          value={values.notes}
-        />
-      </label>
+      <TextField
+        fullWidth
+        label="备注"
+        multiline
+        onChange={(event) => updateValue('notes', event.target.value)}
+        placeholder="补充上下文、负责人或下一步动作"
+        rows={3}
+        slotProps={{ htmlInput: { maxLength: 180 } }}
+        value={values.notes}
+      />
 
-      <div className="metric-fields" aria-label="任务指标">
-        <label>
-          <span>重要程度 {values.importance}</span>
-          <input
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+            重要程度 {values.importance}
+          </Typography>
+          <Slider
+            aria-label="重要程度"
             max={100}
             min={0}
-            onChange={(event) => updateValue('importance', Number(event.target.value))}
-            type="range"
             value={values.importance}
+            valueLabelDisplay="auto"
+            onChange={(_, value) => updateValue('importance', Array.isArray(value) ? value[0] : value)}
           />
-        </label>
-        <label>
-          <span>紧急程度 {values.urgency}</span>
-          <input
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+            紧急程度 {values.urgency}
+          </Typography>
+          <Slider
+            aria-label="紧急程度"
             max={100}
             min={0}
-            onChange={(event) => updateValue('urgency', Number(event.target.value))}
-            type="range"
             value={values.urgency}
+            valueLabelDisplay="auto"
+            onChange={(_, value) => updateValue('urgency', Array.isArray(value) ? value[0] : value)}
           />
-        </label>
-      </div>
+        </Box>
+      </Stack>
 
-      <label className="axis-checkbox">
-        <input
-          checked={values.showOnAxis}
-          onChange={(event) => updateValue('showOnAxis', event.target.checked)}
-          type="checkbox"
-        />
-        <span>显示在坐标轴上</span>
-      </label>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={values.showOnAxis}
+            onChange={(event) => updateValue('showOnAxis', event.target.checked)}
+          />
+        }
+        label="显示在坐标轴中"
+      />
 
-      <div className="modal-actions">
-        <button className="ghost-button" onClick={onCancel} type="button">
+      <Stack direction="row" spacing={1.25} sx={{ justifyContent: 'flex-end', pt: 1 }}>
+        <Button onClick={onCancel} type="button" variant="outlined">
           取消
-        </button>
-        <button className="primary-button" disabled={!values.title.trim()} type="submit">
-          <Save size={18} aria-hidden="true" />
+        </Button>
+        <Button
+          disableElevation
+          disabled={!values.title.trim()}
+          startIcon={<SaveRoundedIcon />}
+          type="submit"
+          variant="contained"
+        >
           {mode === 'create' ? '添加任务' : '保存修改'}
-        </button>
-      </div>
-    </form>
+        </Button>
+      </Stack>
+    </Stack>
   );
 }
