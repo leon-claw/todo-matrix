@@ -4,6 +4,8 @@ export interface MatrixTask {
   notes: string;
   importance: number;
   urgency: number;
+  color: string;
+  progress: number;
   showOnAxis: boolean;
   completed: boolean;
   createdAt: string;
@@ -13,11 +15,13 @@ export interface MatrixTask {
 export interface TaskMetrics {
   importance: number;
   urgency: number;
+  progress: number;
 }
 
 export interface TaskFormValues extends TaskMetrics {
   title: string;
   notes: string;
+  color: string;
   showOnAxis: boolean;
 }
 

@@ -1,5 +1,18 @@
 import { useMemo, useState } from 'react';
-import { Alert, Box, CircularProgress, Container, Dialog, DialogContent, IconButton, Paper } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
+  Paper,
+} from '@mui/material';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { AppHeader } from './components/AppHeader';
 import { PriorityAxis } from './components/PriorityAxis';
@@ -27,6 +40,7 @@ export function App() {
     deleteTask,
   } = useLocalTasks();
   const [editorState, setEditorState] = useState<EditorState | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<MatrixTask | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('active');
 
   const visibleTasks = useMemo(() => {
@@ -69,6 +83,22 @@ export function App() {
     }
 
     closeEditor();
+  }
+
+  function requestDeleteTask(taskId: string) {
+    const task = tasks.find((currentTask) => currentTask.id === taskId);
+    if (task) {
+      setDeleteTarget(task);
+    }
+  }
+
+  function confirmDeleteTask() {
+    if (!deleteTarget) {
+      return;
+    }
+
+    deleteTask(deleteTarget.id);
+    setDeleteTarget(null);
   }
 
   return (
@@ -128,7 +158,7 @@ export function App() {
             </Paper>
           ) : (
             <TodoList
-              onDeleteTask={deleteTask}
+              onDeleteTask={requestDeleteTask}
               onEditTask={openEditTask}
               onMetricsChange={updateTaskMetrics}
               onToggleAxis={toggleAxisVisibility}
@@ -169,6 +199,31 @@ export function App() {
             />
           ) : null}
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        slotProps={{
+          paper: {
+            sx: { borderRadius: 3 },
+          },
+        }}
+      >
+        <DialogTitle>确认删除任务？</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            删除后将从本地数据中移除“{deleteTarget?.title}”。这个操作无法撤销。
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteTarget(null)} variant="outlined">
+            取消
+          </Button>
+          <Button color="error" onClick={confirmDeleteTask} variant="contained">
+            确认删除
+          </Button>
+        </DialogActions>
       </Dialog>
     </Container>
   );

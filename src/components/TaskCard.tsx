@@ -1,4 +1,15 @@
-import { Box, ButtonBase, Collapse, Divider, IconButton, Paper, Slider, Stack, Tooltip, Typography } from '@mui/material';
+import {
+  Box,
+  ButtonBase,
+  Collapse,
+  Divider,
+  IconButton,
+  Paper,
+  Slider,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
@@ -36,22 +47,32 @@ export function TaskCard({
       sx={{
         bgcolor: task.completed ? 'grey.50' : 'background.paper',
         opacity: task.completed ? 0.78 : 1,
-        p: 1.25,
+        overflow: 'hidden',
+        position: 'relative',
         transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+        '&::before': {
+          bgcolor: task.color,
+          bottom: 0,
+          content: '""',
+          left: 0,
+          position: 'absolute',
+          top: 0,
+          width: 4,
+        },
         '&:hover': {
-          borderColor: 'primary.light',
+          borderColor: task.color,
           boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
           transform: 'translateY(-1px)',
         },
       }}
     >
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', p: 1.25, pl: 1.75 }}>
         <Tooltip title={task.completed ? '标记为未完成' : '标记为完成'}>
           <IconButton
             aria-label={task.completed ? '标记为未完成' : '标记为完成'}
-            color={task.completed ? 'success' : 'default'}
             onClick={() => onToggle(task.id)}
             size="small"
+            sx={{ color: task.completed ? 'success.main' : task.color }}
           >
             {task.completed ? <CheckCircleRoundedIcon /> : <RadioButtonUncheckedRoundedIcon />}
           </IconButton>
@@ -69,17 +90,31 @@ export function TaskCard({
               width: '100%',
             }}
           >
-            <Typography
-              component="h3"
-              sx={{
-                fontWeight: 700,
-                overflowWrap: 'anywhere',
-                textDecoration: task.completed ? 'line-through' : 'none',
-              }}
-              variant="body1"
-            >
-              {task.title}
-            </Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
+              <Box
+                aria-hidden="true"
+                sx={{
+                  bgcolor: task.color,
+                  borderRadius: '50%',
+                  boxShadow: '0 0 0 3px rgba(15, 23, 42, 0.04)',
+                  flex: '0 0 auto',
+                  height: 10,
+                  width: 10,
+                }}
+              />
+              <Typography
+                component="h3"
+                sx={{
+                  fontWeight: 700,
+                  minWidth: 0,
+                  overflowWrap: 'anywhere',
+                  textDecoration: task.completed ? 'line-through' : 'none',
+                }}
+                variant="body1"
+              >
+                {task.title}
+              </Typography>
+            </Stack>
           </ButtonBase>
 
           <Collapse in={isExpanded} timeout={180} unmountOnExit>
@@ -92,37 +127,62 @@ export function TaskCard({
 
               <Divider sx={{ my: 1.5 }} />
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
-                    重要程度 {task.importance}
-                  </Typography>
+              <Stack spacing={1.75}>
+                <Box>
+                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
+                    <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
+                      进度
+                    </Typography>
+                    <Typography color="text.secondary" variant="caption">
+                      {task.progress}%
+                    </Typography>
+                  </Stack>
                   <Slider
-                    aria-label="重要程度"
+                    aria-label="进度"
                     max={100}
                     min={0}
                     size="small"
-                    value={task.importance}
+                    sx={{ color: task.color }}
+                    value={task.progress}
+                    valueLabelDisplay="auto"
                     onChange={(_, value) =>
-                      onMetricsChange(task.id, { importance: Array.isArray(value) ? value[0] : value })
+                      onMetricsChange(task.id, { progress: Array.isArray(value) ? value[0] : value })
                     }
                   />
                 </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
-                    紧急程度 {task.urgency}
-                  </Typography>
-                  <Slider
-                    aria-label="紧急程度"
-                    max={100}
-                    min={0}
-                    size="small"
-                    value={task.urgency}
-                    onChange={(_, value) =>
-                      onMetricsChange(task.id, { urgency: Array.isArray(value) ? value[0] : value })
-                    }
-                  />
-                </Box>
+
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+                      重要程度 {task.importance}
+                    </Typography>
+                    <Slider
+                      aria-label="重要程度"
+                      max={100}
+                      min={0}
+                      size="small"
+                      value={task.importance}
+                      onChange={(_, value) =>
+                        onMetricsChange(task.id, { importance: Array.isArray(value) ? value[0] : value })
+                      }
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+                      紧急程度 {task.urgency}
+                    </Typography>
+                    <Slider
+                      aria-label="紧急程度"
+                      max={100}
+                      min={0}
+                      size="small"
+                      value={task.urgency}
+                      onChange={(_, value) =>
+                        onMetricsChange(task.id, { urgency: Array.isArray(value) ? value[0] : value })
+                      }
+                    />
+                  </Box>
+                </Stack>
               </Stack>
             </Box>
           </Collapse>

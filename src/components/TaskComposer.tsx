@@ -1,6 +1,18 @@
-import { Box, Button, Checkbox, FormControlLabel, Slider, Stack, TextField, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  ButtonBase,
+  Checkbox,
+  FormControlLabel,
+  Slider,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { FormEvent, useEffect, useState } from 'react';
+import { DEFAULT_TASK_COLOR, TASK_COLOR_PRESETS } from '../constants/taskAppearance';
 import type { MatrixTask, TaskFormValues } from '../types';
 
 interface TaskComposerProps {
@@ -15,6 +27,8 @@ const emptyTask: TaskFormValues = {
   notes: '',
   importance: 60,
   urgency: 50,
+  color: DEFAULT_TASK_COLOR,
+  progress: 0,
   showOnAxis: true,
 };
 
@@ -28,6 +42,8 @@ function getInitialValues(task?: MatrixTask | null): TaskFormValues {
     notes: task.notes,
     importance: task.importance,
     urgency: task.urgency,
+    color: task.color,
+    progress: task.progress,
     showOnAxis: task.showOnAxis,
   };
 }
@@ -70,7 +86,7 @@ export function TaskComposer({
         fullWidth
         label="任务标题"
         onChange={(event) => updateValue('title', event.target.value)}
-        placeholder="例如：完成离线数据方案"
+        placeholder="例如：做晚饭"
         slotProps={{ htmlInput: { maxLength: 80 } }}
         value={values.title}
       />
@@ -85,6 +101,51 @@ export function TaskComposer({
         slotProps={{ htmlInput: { maxLength: 180 } }}
         value={values.notes}
       />
+
+      <Box>
+        <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 1 }} variant="caption">
+          颜色标签
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+          {TASK_COLOR_PRESETS.map((color) => {
+            const selected = values.color.toLowerCase() === color.toLowerCase();
+
+            return (
+              <ButtonBase
+                aria-label={`选择颜色 ${color}`}
+                aria-pressed={selected}
+                key={color}
+                onClick={() => updateValue('color', color)}
+                sx={{
+                  alignItems: 'center',
+                  bgcolor: color,
+                  border: 2,
+                  borderColor: selected ? 'text.primary' : 'background.paper',
+                  borderRadius: '50%',
+                  boxShadow: selected ? '0 0 0 4px rgba(37, 99, 235, 0.12)' : '0 4px 12px rgba(15, 23, 42, 0.12)',
+                  color: '#fff',
+                  display: 'inline-flex',
+                  height: 34,
+                  justifyContent: 'center',
+                  width: 34,
+                }}
+                type="button"
+              >
+                {selected ? <CheckRoundedIcon fontSize="small" /> : null}
+              </ButtonBase>
+            );
+          })}
+          <TextField
+            label="自定义"
+            onChange={(event) => updateValue('color', event.target.value)}
+            size="small"
+            sx={{ width: 112 }}
+            type="color"
+            value={values.color}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+        </Stack>
+      </Box>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -114,6 +175,25 @@ export function TaskComposer({
           />
         </Box>
       </Stack>
+
+      <Box>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
+          <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
+            进度
+          </Typography>
+          <Typography color="text.secondary" variant="caption">
+            {values.progress}%
+          </Typography>
+        </Stack>
+        <Slider
+          aria-label="进度"
+          max={100}
+          min={0}
+          value={values.progress}
+          valueLabelDisplay="auto"
+          onChange={(_, value) => updateValue('progress', Array.isArray(value) ? value[0] : value)}
+        />
+      </Box>
 
       <FormControlLabel
         control={

@@ -18,7 +18,7 @@ echarts.use([
 
 interface PriorityAxisProps {
   tasks: MatrixTask[];
-  onMetricsChange: (taskId: string, metrics: TaskMetrics) => void;
+  onMetricsChange: (taskId: string, metrics: Partial<TaskMetrics>) => void;
 }
 
 interface DragElement {
@@ -129,6 +129,10 @@ function getLabelStyle(title: string, active: boolean) {
   };
 }
 
+function getAxisLabelText(task: MatrixTask) {
+  return task.progress > 0 ? `${task.progress}% ${task.title}` : task.title;
+}
+
 function preventNativeGesture(event?: ZrPointerEvent) {
   event?.event?.preventDefault?.();
   event?.event?.stopPropagation?.();
@@ -189,7 +193,7 @@ function setLabelState(chart: ECharts, task: MatrixTask, position: number[], act
       {
         id: `task-label-${task.id}`,
         ...getLabelPosition(chart, position),
-        style: getLabelStyle(task.title, active),
+        style: getLabelStyle(getAxisLabelText(task), active),
       },
     ],
   });
@@ -227,7 +231,7 @@ function flushLabelState(chart: ECharts, task: MatrixTask, controller: LabelFram
 function buildGraphicElements(
   chart: ECharts,
   tasks: MatrixTask[],
-  onMetricsChange: (taskId: string, metrics: TaskMetrics) => void,
+  onMetricsChange: (taskId: string, metrics: Partial<TaskMetrics>) => void,
 ) {
   return tasks.flatMap((task) => {
     const position = chart.convertToPixel({ gridIndex: 0 }, [
@@ -244,7 +248,7 @@ function buildGraphicElements(
     return [
       {
         id: `task-${task.id}`,
-        name: task.title,
+        name: getAxisLabelText(task),
         type: 'circle',
         position,
         draggable: true,
@@ -256,7 +260,7 @@ function buildGraphicElements(
           r: 15,
         },
         style: {
-          fill: task.completed ? '#94a3b8' : '#2563eb',
+          fill: task.completed ? '#94a3b8' : task.color,
           stroke: '#ffffff',
           lineWidth: 3,
           shadowBlur: 12,
@@ -314,7 +318,7 @@ function buildGraphicElements(
         silent: true,
         z: 101,
         ...getLabelPosition(chart, position),
-        style: getLabelStyle(task.title, false),
+        style: getLabelStyle(getAxisLabelText(task), false),
       },
     ];
   });
@@ -373,10 +377,10 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
       {
         type: 'scatter',
         data: tasks.map((task) => ({
-          name: task.title,
+          name: getAxisLabelText(task),
           value: [task.importance, task.urgency],
           itemStyle: {
-            color: task.completed ? '#94a3b8' : '#2563eb',
+            color: task.completed ? '#94a3b8' : task.color,
             opacity: 0.16,
           },
         })),

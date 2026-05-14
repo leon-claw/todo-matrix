@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { DEFAULT_TASK_COLOR } from '../constants/taskAppearance';
 import { sampleTasks } from '../data/sampleTasks';
 import { loadTasks, saveTasks } from '../lib/localDatabase';
 import type { MatrixTask, TaskFormValues, TaskMetrics } from '../types';
@@ -30,6 +31,10 @@ function clampMetric(value: number | undefined, fallback: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+function normalizeColor(value: string | undefined) {
+  return value?.trim() || DEFAULT_TASK_COLOR;
+}
+
 function normalizeTask(task: StoredTask): MatrixTask {
   const timestamp = new Date().toISOString();
 
@@ -39,6 +44,8 @@ function normalizeTask(task: StoredTask): MatrixTask {
     notes: task.notes ?? '',
     importance: clampMetric(task.importance, 50),
     urgency: clampMetric(task.urgency, 50),
+    color: normalizeColor(task.color),
+    progress: clampMetric(task.progress, 0),
     showOnAxis: task.showOnAxis ?? true,
     completed: task.completed ?? false,
     createdAt: task.createdAt ?? timestamp,
@@ -134,6 +141,8 @@ export function useLocalTasks() {
         notes: input.notes.trim(),
         importance: clampMetric(input.importance, 50),
         urgency: clampMetric(input.urgency, 50),
+        color: normalizeColor(input.color),
+        progress: clampMetric(input.progress, 0),
         showOnAxis: input.showOnAxis,
         completed: false,
         createdAt: timestamp,
@@ -157,6 +166,8 @@ export function useLocalTasks() {
                 notes: input.notes.trim(),
                 importance: clampMetric(input.importance, task.importance),
                 urgency: clampMetric(input.urgency, task.urgency),
+                color: normalizeColor(input.color),
+                progress: clampMetric(input.progress, task.progress),
                 showOnAxis: input.showOnAxis,
                 updatedAt: timestamp,
               }
@@ -191,6 +202,7 @@ export function useLocalTasks() {
                 ...task,
                 importance: clampMetric(metrics.importance, task.importance),
                 urgency: clampMetric(metrics.urgency, task.urgency),
+                progress: clampMetric(metrics.progress, task.progress),
                 updatedAt: timestamp,
               }
             : task,
