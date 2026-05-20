@@ -16,6 +16,7 @@ import {
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { AppHeader } from './components/AppHeader';
 import { AuthPanel } from './components/AuthPanel';
+import { ChangePasswordPanel } from './components/ChangePasswordPanel';
 import { DataResolutionPanel } from './components/DataResolutionPanel';
 import { PriorityAxis } from './components/PriorityAxis';
 import { StatsStrip } from './components/StatsStrip';
@@ -34,6 +35,7 @@ type EditorState =
 export function App() {
   const {
     authError,
+    changePassword,
     isAuthLoading,
     login,
     logout,
@@ -51,6 +53,9 @@ export function App() {
   const [deleteTarget, setDeleteTarget] = useState<MatrixTask | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('active');
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
+  const [isPasswordChanging, setIsPasswordChanging] = useState(false);
   const [migrationBusy, setMigrationBusy] = useState(false);
 
   useEffect(() => {
@@ -148,7 +153,22 @@ export function App() {
 
   async function handleLogout() {
     await logout();
+    setChangePasswordDialogOpen(false);
     setLocalDataResolved(false);
+  }
+
+  async function handleChangePassword(currentPassword: string, nextPassword: string) {
+    setIsPasswordChanging(true);
+    setChangePasswordError(null);
+    try {
+      await changePassword({ currentPassword, nextPassword });
+      setChangePasswordDialogOpen(false);
+    } catch (error) {
+      setChangePasswordError(error instanceof ApiError ? error.message : '修改密码失败，请稍后重试。');
+      throw error;
+    } finally {
+      setIsPasswordChanging(false);
+    }
   }
 
   async function handleReplaceCloudWithLocal() {
@@ -263,6 +283,11 @@ export function App() {
     <Container maxWidth={false} sx={{ maxWidth: 1480, py: { xs: 2, md: 3 } }}>
       <AppHeader
         isCloudMode={isCloudMode}
+        isSyncing={isCloudMode && cloudStore.isSyncing}
+        onChangePassword={() => {
+          setChangePasswordError(null);
+          setChangePasswordDialogOpen(true);
+        }}
         onCreateTask={openCreateTask}
         onLogin={() => setAuthDialogOpen(true)}
         onLogout={handleLogout}
@@ -287,6 +312,29 @@ export function App() {
         </IconButton>
         <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
           <AuthPanel error={authError} isLoading={isAuthLoading} onLogin={handleLogin} onRegister={handleRegister} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        fullWidth
+        maxWidth="sm"
+        open={changePasswordDialogOpen}
+        onClose={() => setChangePasswordDialogOpen(false)}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
+        <IconButton
+          aria-label="关闭"
+          onClick={() => setChangePasswordDialogOpen(false)}
+          sx={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
+        >
+          <CloseRoundedIcon fontSize="small" />
+        </IconButton>
+        <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <ChangePasswordPanel
+            error={changePasswordError}
+            isLoading={isPasswordChanging}
+            onSubmit={handleChangePassword}
+          />
         </DialogContent>
       </Dialog>
 

@@ -1,19 +1,30 @@
-import { Box, Button, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, Stack, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
+import LockResetRoundedIcon from '@mui/icons-material/LockResetRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import { InstallPrompt } from './InstallPrompt';
 import type { CurrentUser } from '../types/auth';
 
 interface AppHeaderProps {
   isCloudMode: boolean;
+  isSyncing?: boolean;
+  onChangePassword: () => void;
   onCreateTask: () => void;
   onLogin: () => void;
   onLogout: () => void;
   user: CurrentUser | null;
 }
 
-export function AppHeader({ isCloudMode, onCreateTask, onLogin, onLogout, user }: AppHeaderProps) {
+export function AppHeader({
+  isCloudMode,
+  isSyncing = false,
+  onChangePassword,
+  onCreateTask,
+  onLogin,
+  onLogout,
+  user,
+}: AppHeaderProps) {
   return (
     <Stack
       component="header"
@@ -67,16 +78,24 @@ export function AppHeader({ isCloudMode, onCreateTask, onLogin, onLogout, user }
         spacing={1}
         sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}
       >
-        <Chip
-          color={isCloudMode ? 'primary' : 'default'}
-          label={isCloudMode ? '云端模式' : '本地模式'}
-          size="small"
-          variant={isCloudMode ? 'filled' : 'outlined'}
-        />
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+          <Chip
+            color={isCloudMode ? 'primary' : 'default'}
+            label={isCloudMode ? '云端模式' : '本地模式'}
+            size="small"
+            variant={isCloudMode ? 'filled' : 'outlined'}
+          />
+          {isCloudMode && isSyncing ? <CircularProgress aria-label="正在同步云端数据" size={16} /> : null}
+        </Stack>
         {user ? (
-          <Button onClick={onLogout} startIcon={<LogoutRoundedIcon />} type="button" variant="outlined">
-            退出
-          </Button>
+          <>
+            <Button onClick={onChangePassword} startIcon={<LockResetRoundedIcon />} type="button" variant="outlined">
+              修改密码
+            </Button>
+            <Button onClick={onLogout} startIcon={<LogoutRoundedIcon />} type="button" variant="outlined">
+              退出
+            </Button>
+          </>
         ) : (
           <Button onClick={onLogin} startIcon={<LoginRoundedIcon />} type="button" variant="outlined">
             登录/注册

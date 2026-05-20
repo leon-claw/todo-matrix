@@ -4,7 +4,14 @@ import { Prisma } from '@prisma/client';
 import { attachUser, clearSessionCookie, createSession, hashPassword, requireAuth, userResponse, verifyPassword } from './auth';
 import { createCaptchaChallenge, verifyCaptchaChallenge } from './captcha';
 import { prisma } from './prisma';
-import { authSchema, migrationReplaceSchema, registerSchema, taskInputSchema, taskPatchSchema } from './schemas';
+import {
+  authSchema,
+  changePasswordSchema,
+  migrationReplaceSchema,
+  registerSchema,
+  taskInputSchema,
+  taskPatchSchema,
+} from './schemas';
 import { toTaskCreateInput, toTaskResponse } from './tasks';
 
 export const app = express();
@@ -97,6 +104,29 @@ app.post('/api/auth/logout', requireAuth, async (req, res) => {
   }
   clearSessionCookie(res);
   res.status(204).send();
+});
+
+app.post('/api/auth/change-password', requireAuth, async (req, res) => {
+  try {
+    const input = changePasswordSchema.parse(req.body);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: req.currentUser!.id },
+      select: { id: true, passwordHash: true },
+    });
+
+    if (!(await verifyPassword(user.passwordHash, input.currentPassword))) {
+      res.status(401).json({ error: '当前密码不正确' });
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await hashPassword(input.nextPassword) },
+    });
+    res.status(204).send();
+  } catch (error) {
+    handleError(error, res);
+  }
 });
 
 app.get('/api/tasks', requireAuth, async (req, res) => {

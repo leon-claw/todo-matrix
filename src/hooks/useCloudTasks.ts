@@ -18,7 +18,17 @@ function toTaskPayload(input: TaskFormValues) {
 export function useCloudTasks(enabled: boolean) {
   const [tasks, setTasks] = useState<MatrixTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
   const [storageError, setStorageError] = useState<string | null>(null);
+
+  const runSync = useCallback(async <T,>(operation: () => Promise<T>) => {
+    setPendingSyncCount((current) => current + 1);
+    try {
+      return await operation();
+    } finally {
+      setPendingSyncCount((current) => Math.max(0, current - 1));
+    }
+  }, []);
 
   const reloadTasks = useCallback(async () => {
     if (!enabled) {
@@ -43,28 +53,34 @@ export function useCloudTasks(enabled: boolean) {
   }, [reloadTasks]);
 
   const addTask = useCallback(async (input: TaskFormValues) => {
-    const response = await apiRequest<{ task: MatrixTask }>('/api/tasks', {
-      method: 'POST',
-      body: toTaskPayload(input),
-    });
+    const response = await runSync(() =>
+      apiRequest<{ task: MatrixTask }>('/api/tasks', {
+        method: 'POST',
+        body: toTaskPayload(input),
+      }),
+    );
     setTasks((current) => sortTasks([response.task, ...current]));
-  }, []);
+  }, [runSync]);
 
   const updateTask = useCallback(async (taskId: string, input: TaskFormValues) => {
-    const response = await apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      body: toTaskPayload(input),
-    });
+    const response = await runSync(() =>
+      apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: toTaskPayload(input),
+      }),
+    );
     setTasks((current) => sortTasks(current.map((task) => (task.id === taskId ? response.task : task))));
-  }, []);
+  }, [runSync]);
 
   const updateTaskMetrics = useCallback(async (taskId: string, metrics: Partial<TaskMetrics>) => {
-    const response = await apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      body: metrics,
-    });
+    const response = await runSync(() =>
+      apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: metrics,
+      }),
+    );
     setTasks((current) => sortTasks(current.map((task) => (task.id === taskId ? response.task : task))));
-  }, []);
+  }, [runSync]);
 
   const toggleTask = useCallback(async (taskId: string) => {
     const task = tasks.find((currentTask) => currentTask.id === taskId);
@@ -72,12 +88,14 @@ export function useCloudTasks(enabled: boolean) {
       return;
     }
 
-    const response = await apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      body: { completed: !task.completed },
-    });
+    const response = await runSync(() =>
+      apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: { completed: !task.completed },
+      }),
+    );
     setTasks((current) => sortTasks(current.map((currentTask) => (currentTask.id === taskId ? response.task : currentTask))));
-  }, [tasks]);
+  }, [runSync, tasks]);
 
   const toggleAxisVisibility = useCallback(async (taskId: string) => {
     const task = tasks.find((currentTask) => currentTask.id === taskId);
@@ -85,25 +103,29 @@ export function useCloudTasks(enabled: boolean) {
       return;
     }
 
-    const response = await apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
-      method: 'PATCH',
-      body: { showOnAxis: !task.showOnAxis },
-    });
+    const response = await runSync(() =>
+      apiRequest<{ task: MatrixTask }>(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        body: { showOnAxis: !task.showOnAxis },
+      }),
+    );
     setTasks((current) => sortTasks(current.map((currentTask) => (currentTask.id === taskId ? response.task : currentTask))));
-  }, [tasks]);
+  }, [runSync, tasks]);
 
   const deleteTask = useCallback(async (taskId: string) => {
-    await apiRequest<void>(`/api/tasks/${taskId}`, { method: 'DELETE' });
+    await runSync(() => apiRequest<void>(`/api/tasks/${taskId}`, { method: 'DELETE' }));
     setTasks((current) => current.filter((task) => task.id !== taskId));
-  }, []);
+  }, [runSync]);
 
   const replaceCloudTasks = useCallback(async (nextTasks: MatrixTask[]) => {
-    const response = await apiRequest<{ tasks: MatrixTask[] }>('/api/migration/replace-tasks', {
-      method: 'POST',
-      body: { tasks: nextTasks },
-    });
+    const response = await runSync(() =>
+      apiRequest<{ tasks: MatrixTask[] }>('/api/migration/replace-tasks', {
+        method: 'POST',
+        body: { tasks: nextTasks },
+      }),
+    );
     setTasks(sortTasks(response.tasks));
-  }, []);
+  }, [runSync]);
 
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length;
@@ -121,6 +143,7 @@ export function useCloudTasks(enabled: boolean) {
     addTask,
     deleteTask,
     isLoading,
+    isSyncing: isLoading || pendingSyncCount > 0,
     reloadTasks,
     replaceCloudTasks,
     stats,

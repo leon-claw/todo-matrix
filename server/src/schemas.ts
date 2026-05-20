@@ -18,6 +18,11 @@ export const registerSchema = authSchema.extend({
   captchaAnswer: z.string().trim().min(1).max(12),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  nextPassword: z.string().min(8).max(128),
+});
+
 export const taskInputSchema = z.object({
   title: z.string().trim().min(1).max(120),
   notes: z.string().trim().max(1000).default(''),

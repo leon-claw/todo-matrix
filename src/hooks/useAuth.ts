@@ -12,6 +12,11 @@ interface RegisterPayload extends AuthPayload {
   captchaId: string;
 }
 
+interface ChangePasswordPayload {
+  currentPassword: string;
+  nextPassword: string;
+}
+
 export function useAuth() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -57,8 +62,17 @@ export function useAuth() {
     setUser(null);
   }, []);
 
+  const changePassword = useCallback(async (payload: ChangePasswordPayload) => {
+    await apiRequest<void>('/api/auth/change-password', {
+      method: 'POST',
+      body: payload,
+    });
+    setAuthError(null);
+  }, []);
+
   return {
     authError,
+    changePassword,
     isAuthLoading,
     login,
     logout,
