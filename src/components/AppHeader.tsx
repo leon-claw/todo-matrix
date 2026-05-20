@@ -1,12 +1,19 @@
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, Stack, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
+import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import { InstallPrompt } from './InstallPrompt';
+import type { CurrentUser } from '../types/auth';
 
 interface AppHeaderProps {
+  isCloudMode: boolean;
   onCreateTask: () => void;
+  onLogin: () => void;
+  onLogout: () => void;
+  user: CurrentUser | null;
 }
 
-export function AppHeader({ onCreateTask }: AppHeaderProps) {
+export function AppHeader({ isCloudMode, onCreateTask, onLogin, onLogout, user }: AppHeaderProps) {
   return (
     <Stack
       component="header"
@@ -49,7 +56,7 @@ export function AppHeader({ onCreateTask }: AppHeaderProps) {
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h1">Todo Matrix</Typography>
           <Typography color="text.secondary" variant="subtitle2">
-            离线优先的本地 TODO 坐标轴
+            离线优先的 TODO 坐标轴
           </Typography>
         </Box>
       </Stack>
@@ -58,8 +65,23 @@ export function AppHeader({ onCreateTask }: AppHeaderProps) {
         aria-label="任务操作"
         direction="row"
         spacing={1}
-        sx={{ flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}
+        sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}
       >
+        <Chip
+          color={isCloudMode ? 'primary' : 'default'}
+          label={isCloudMode ? '云端模式' : '本地模式'}
+          size="small"
+          variant={isCloudMode ? 'filled' : 'outlined'}
+        />
+        {user ? (
+          <Button onClick={onLogout} startIcon={<LogoutRoundedIcon />} type="button" variant="outlined">
+            退出
+          </Button>
+        ) : (
+          <Button onClick={onLogin} startIcon={<LoginRoundedIcon />} type="button" variant="outlined">
+            登录/注册
+          </Button>
+        )}
         <InstallPrompt />
         <Button
           disableElevation

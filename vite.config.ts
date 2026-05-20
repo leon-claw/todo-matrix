@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     server: {
       host: '127.0.0.1',
+      proxy: {
+        '/api': 'http://127.0.0.1:3001',
+      },
     },
     preview: {
       host: '127.0.0.1',

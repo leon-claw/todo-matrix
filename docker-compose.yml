@@ -1,0 +1,22 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: todo-matrix-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: todo_matrix_root
+      MYSQL_DATABASE: todo_matrix
+      MYSQL_USER: todo_matrix
+      MYSQL_PASSWORD: todo_matrix_dev
+    ports:
+      - "3306:3306"
+    volumes:
+      - todo_matrix_mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -utodo_matrix -ptodo_matrix_dev --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  todo_matrix_mysql:

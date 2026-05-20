@@ -1,0 +1,70 @@
+import { useCallback, useEffect, useState } from 'react';
+import { apiRequest } from '../lib/apiClient';
+import type { CurrentUser } from '../types/auth';
+
+interface AuthPayload {
+  email: string;
+  password: string;
+}
+
+interface RegisterPayload extends AuthPayload {
+  captchaAnswer: string;
+  captchaId: string;
+}
+
+export function useAuth() {
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const refreshUser = useCallback(async () => {
+    setIsAuthLoading(true);
+    try {
+      const response = await apiRequest<{ user: CurrentUser | null }>('/api/auth/me');
+      setUser(response.user);
+      setAuthError(null);
+    } catch {
+      setUser(null);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshUser();
+  }, [refreshUser]);
+
+  const login = useCallback(async (payload: AuthPayload) => {
+    const response = await apiRequest<{ user: CurrentUser }>('/api/auth/login', {
+      method: 'POST',
+      body: payload,
+    });
+    setUser(response.user);
+    setAuthError(null);
+  }, []);
+
+  const register = useCallback(async (payload: RegisterPayload) => {
+    const response = await apiRequest<{ user: CurrentUser }>('/api/auth/register', {
+      method: 'POST',
+      body: payload,
+    });
+    setUser(response.user);
+    setAuthError(null);
+  }, []);
+
+  const logout = useCallback(async () => {
+    await apiRequest<void>('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    setUser(null);
+  }, []);
+
+  return {
+    authError,
+    isAuthLoading,
+    login,
+    logout,
+    refreshUser,
+    register,
+    setAuthError,
+    user,
+  };
+}

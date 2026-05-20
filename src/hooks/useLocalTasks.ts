@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DEFAULT_TASK_COLOR } from '../constants/taskAppearance';
-import { sampleTasks } from '../data/sampleTasks';
-import { loadTasks, saveTasks } from '../lib/localDatabase';
+import { clearTasks, loadTasks, saveTasks } from '../lib/localDatabase';
+import { clampMetric, sortTasks } from '../lib/taskUtils';
 import type { MatrixTask, TaskFormValues, TaskMetrics } from '../types';
-
-const TODO_SORT_WEIGHTS = {
-  importance: 1,
-  urgency: 1,
-};
 
 type StoredTask = Partial<MatrixTask> & {
   id: string;
@@ -21,14 +16,6 @@ function createId() {
   }
 
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-function clampMetric(value: number | undefined, fallback: number) {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return fallback;
-  }
-
-  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function normalizeColor(value: string | undefined) {
@@ -61,28 +48,6 @@ function normalizeTasks(tasks: MatrixTask[] | null) {
   return tasks.map((task) => normalizeTask(task as StoredTask));
 }
 
-function getTaskScore(task: MatrixTask) {
-  return (
-    task.importance * TODO_SORT_WEIGHTS.importance +
-    task.urgency * TODO_SORT_WEIGHTS.urgency
-  );
-}
-
-function sortTasks(tasks: MatrixTask[]) {
-  return [...tasks].sort((first, second) => {
-    if (first.completed !== second.completed) {
-      return Number(first.completed) - Number(second.completed);
-    }
-
-    const scoreDelta = getTaskScore(second) - getTaskScore(first);
-    if (scoreDelta !== 0) {
-      return scoreDelta;
-    }
-
-    return new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime();
-  });
-}
-
 export function useLocalTasks() {
   const [tasks, setTasks] = useState<MatrixTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +63,7 @@ export function useLocalTasks() {
         }
 
         const normalizedTasks = normalizeTasks(storedTasks);
-        const initialTasks = normalizedTasks ?? sampleTasks;
+        const initialTasks = normalizedTasks ?? [];
         const sortedTasks = sortTasks(initialTasks);
         setTasks(sortedTasks);
 
@@ -233,6 +198,15 @@ export function useLocalTasks() {
     [commit, tasks],
   );
 
+  const clearLocalTasks = useCallback(async () => {
+    setTasks([]);
+    try {
+      await clearTasks();
+    } catch {
+      setStorageError('本地数据清理失败，请检查浏览器存储权限。');
+    }
+  }, []);
+
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length;
     const shownOnAxis = tasks.filter((task) => task.showOnAxis && !task.completed).length;
@@ -256,5 +230,6 @@ export function useLocalTasks() {
     updateTaskMetrics,
     toggleAxisVisibility,
     deleteTask,
+    clearLocalTasks,
   };
 }

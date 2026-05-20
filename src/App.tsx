@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -15,12 +15,17 @@ import {
 } from '@mui/material';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { AppHeader } from './components/AppHeader';
+import { AuthPanel } from './components/AuthPanel';
+import { DataResolutionPanel } from './components/DataResolutionPanel';
 import { PriorityAxis } from './components/PriorityAxis';
 import { StatsStrip } from './components/StatsStrip';
 import { TaskComposer } from './components/TaskComposer';
 import { TodoList } from './components/TodoList';
+import { useAuth } from './hooks/useAuth';
+import { useCloudTasks } from './hooks/useCloudTasks';
 import { useLocalTasks } from './hooks/useLocalTasks';
-import type { MatrixTask, TaskFilter, TaskFormValues } from './types';
+import { ApiError } from './lib/apiClient';
+import type { MatrixTask, TaskFilter, TaskFormValues, TaskMetrics } from './types';
 
 type EditorState =
   | { mode: 'create'; task: null }
@@ -28,22 +33,34 @@ type EditorState =
 
 export function App() {
   const {
-    tasks,
-    isLoading,
-    storageError,
-    stats,
-    addTask,
-    updateTask,
-    toggleTask,
-    updateTaskMetrics,
-    toggleAxisVisibility,
-    deleteTask,
-  } = useLocalTasks();
+    authError,
+    isAuthLoading,
+    login,
+    logout,
+    register,
+    setAuthError,
+    user,
+  } = useAuth();
+  const localStore = useLocalTasks();
+  const [localDataResolved, setLocalDataResolved] = useState(false);
+  const migrationRequired = Boolean(user && localStore.tasks.length > 0 && !localDataResolved);
+  const isCloudMode = Boolean(user && !migrationRequired);
+  const cloudStore = useCloudTasks(Boolean(user));
+  const activeStore = isCloudMode ? cloudStore : localStore;
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MatrixTask | null>(null);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('active');
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [migrationBusy, setMigrationBusy] = useState(false);
+
+  useEffect(() => {
+    setLocalDataResolved(false);
+    setTaskFilter('active');
+  }, [user?.id]);
 
   const visibleTasks = useMemo(() => {
+    const tasks = activeStore.tasks;
+
     if (taskFilter === 'all') {
       return tasks;
     }
@@ -57,7 +74,7 @@ export function App() {
     }
 
     return tasks.filter((task) => !task.completed);
-  }, [taskFilter, tasks]);
+  }, [activeStore.tasks, taskFilter]);
 
   function openCreateTask() {
     setEditorState({ mode: 'create', task: null });
@@ -71,40 +88,106 @@ export function App() {
     setEditorState(null);
   }
 
-  function handleSubmitTask(values: TaskFormValues) {
+  async function handleSubmitTask(values: TaskFormValues) {
     if (!editorState) {
       return;
     }
 
     if (editorState.mode === 'edit') {
-      updateTask(editorState.task.id, values);
+      await activeStore.updateTask(editorState.task.id, values);
     } else {
-      addTask(values);
+      await activeStore.addTask(values);
     }
 
     closeEditor();
   }
 
   function requestDeleteTask(taskId: string) {
-    const task = tasks.find((currentTask) => currentTask.id === taskId);
+    const task = activeStore.tasks.find((currentTask) => currentTask.id === taskId);
     if (task) {
       setDeleteTarget(task);
     }
   }
 
-  function confirmDeleteTask() {
+  async function confirmDeleteTask() {
     if (!deleteTarget) {
       return;
     }
 
-    deleteTask(deleteTarget.id);
+    await activeStore.deleteTask(deleteTarget.id);
     setDeleteTarget(null);
   }
 
-  return (
-    <Container maxWidth={false} sx={{ maxWidth: 1480, py: { xs: 2, md: 3 } }}>
-      <AppHeader onCreateTask={openCreateTask} />
+  async function handleLogin(email: string, password: string) {
+    try {
+      await login({ email, password });
+      setAuthDialogOpen(false);
+    } catch (error) {
+      setAuthError(error instanceof ApiError ? error.message : '登录失败，请检查邮箱和密码。');
+      throw error;
+    }
+  }
 
+  async function handleRegister(
+    email: string,
+    password: string,
+    captcha: { captchaId: string; captchaAnswer: string },
+  ) {
+    try {
+      await register({ email, password, ...captcha });
+      setAuthDialogOpen(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setAuthError('注册失败，这个邮箱已经被使用。');
+      } else {
+        setAuthError(error instanceof ApiError ? error.message : '注册失败，可能邮箱已被使用或后端暂不可用。');
+      }
+      throw error;
+    }
+  }
+
+  async function handleLogout() {
+    await logout();
+    setLocalDataResolved(false);
+  }
+
+  async function handleReplaceCloudWithLocal() {
+    setMigrationBusy(true);
+    try {
+      await cloudStore.replaceCloudTasks(localStore.tasks);
+      await localStore.clearLocalTasks();
+      setLocalDataResolved(true);
+      await cloudStore.reloadTasks();
+    } finally {
+      setMigrationBusy(false);
+    }
+  }
+
+  async function handleClearLocalOnly() {
+    setMigrationBusy(true);
+    try {
+      await localStore.clearLocalTasks();
+      setLocalDataResolved(true);
+      await cloudStore.reloadTasks();
+    } finally {
+      setMigrationBusy(false);
+    }
+  }
+
+  function renderTodoSurface() {
+    if (migrationRequired) {
+      return (
+        <DataResolutionPanel
+          isBusy={migrationBusy}
+          localCount={localStore.tasks.length}
+          onClearLocal={handleClearLocalOnly}
+          onLogout={handleLogout}
+          onReplaceCloud={handleReplaceCloudWithLocal}
+        />
+      );
+    }
+
+    return (
       <Box
         component="main"
         sx={{
@@ -117,7 +200,12 @@ export function App() {
           },
         }}
       >
-        <PriorityAxis onMetricsChange={updateTaskMetrics} tasks={tasks} />
+        <PriorityAxis
+          onMetricsChange={(taskId: string, metrics: Partial<TaskMetrics>) =>
+            activeStore.updateTaskMetrics(taskId, metrics)
+          }
+          tasks={activeStore.tasks}
+        />
 
         <Paper
           component="section"
@@ -129,18 +217,18 @@ export function App() {
             p: { xs: 1.5, md: 2 },
           }}
         >
-          {storageError ? <Alert severity="error">{storageError}</Alert> : null}
+          {activeStore.storageError ? <Alert severity="error">{activeStore.storageError}</Alert> : null}
 
           <StatsStrip
-            active={stats.active}
+            active={activeStore.stats.active}
             activeFilter={taskFilter}
-            completed={stats.completed}
+            completed={activeStore.stats.completed}
             onFilterChange={setTaskFilter}
-            shownOnAxis={stats.shownOnAxis}
-            total={stats.total}
+            shownOnAxis={activeStore.stats.shownOnAxis}
+            total={activeStore.stats.total}
           />
 
-          {isLoading ? (
+          {activeStore.isLoading || isAuthLoading ? (
             <Paper
               variant="outlined"
               sx={{
@@ -154,33 +242,60 @@ export function App() {
               }}
             >
               <CircularProgress size={20} />
-              正在读取本地数据...
+              正在读取数据...
             </Paper>
           ) : (
             <TodoList
               onDeleteTask={requestDeleteTask}
               onEditTask={openEditTask}
-              onMetricsChange={updateTaskMetrics}
-              onToggleAxis={toggleAxisVisibility}
-              onToggleTask={toggleTask}
+              onMetricsChange={(taskId, metrics) => activeStore.updateTaskMetrics(taskId, metrics)}
+              onToggleAxis={activeStore.toggleAxisVisibility}
+              onToggleTask={activeStore.toggleTask}
               tasks={visibleTasks}
             />
           )}
         </Paper>
       </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth={false} sx={{ maxWidth: 1480, py: { xs: 2, md: 3 } }}>
+      <AppHeader
+        isCloudMode={isCloudMode}
+        onCreateTask={openCreateTask}
+        onLogin={() => setAuthDialogOpen(true)}
+        onLogout={handleLogout}
+        user={user}
+      />
+
+      {renderTodoSurface()}
+
+      <Dialog
+        fullWidth
+        maxWidth="sm"
+        open={authDialogOpen}
+        onClose={() => setAuthDialogOpen(false)}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+      >
+        <IconButton
+          aria-label="关闭"
+          onClick={() => setAuthDialogOpen(false)}
+          sx={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
+        >
+          <CloseRoundedIcon fontSize="small" />
+        </IconButton>
+        <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          <AuthPanel error={authError} isLoading={isAuthLoading} onLogin={handleLogin} onRegister={handleRegister} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         fullWidth
         maxWidth="sm"
         open={Boolean(editorState)}
         onClose={closeEditor}
-        slotProps={{
-          paper: {
-            sx: {
-              borderRadius: 3,
-            },
-          },
-        }}
+        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <IconButton
           aria-label="关闭"
@@ -201,19 +316,11 @@ export function App() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={Boolean(deleteTarget)}
-        onClose={() => setDeleteTarget(null)}
-        slotProps={{
-          paper: {
-            sx: { borderRadius: 3 },
-          },
-        }}
-      >
+      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
         <DialogTitle>确认删除任务？</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            删除后将从本地数据中移除“{deleteTarget?.title}”。这个操作无法撤销。
+            删除后将移除“{deleteTarget?.title}”。这个操作无法撤销。
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
