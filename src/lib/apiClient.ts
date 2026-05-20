@@ -1,3 +1,5 @@
+export const API_BASE = '/app/todo-matrix';
+
 export class ApiError extends Error {
   status: number;
 
@@ -13,7 +15,7 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
 };
 
 export async function apiRequest<T>(url: string, options: RequestOptions = {}) {
-  const response = await fetch(url, {
+  const response = await fetch(`${API_BASE}${url}`, {
     ...options,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     credentials: 'include',
