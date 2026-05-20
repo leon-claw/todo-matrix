@@ -1,0 +1,17 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/auth/auth",
+    "pages/task-editor/task-editor",
+    "pages/change-password/change-password"
+  ],
+  "window": {
+    "backgroundColor": "#f7f8fb",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "Todo Matrix"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

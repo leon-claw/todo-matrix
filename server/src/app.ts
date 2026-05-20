@@ -2,7 +2,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import { Prisma } from '@prisma/client';
 import { attachUser, clearSessionCookie, createSession, hashPassword, requireAuth, userResponse, verifyPassword } from './auth';
-import { createCaptchaChallenge, verifyCaptchaChallenge } from './captcha';
+import { createCaptchaChallenge, readCaptchaImage, verifyCaptchaChallenge } from './captcha';
 import { prisma } from './prisma';
 import {
   authSchema,
@@ -52,6 +52,16 @@ app.get('/api/auth/captcha', (_req, res) => {
   res.json({ captcha: createCaptchaChallenge() });
 });
 
+app.get('/api/auth/captcha/:id.svg', (req, res) => {
+  const svg = readCaptchaImage(req.params.id);
+  if (!svg) {
+    res.status(404).send('Not found');
+    return;
+  }
+
+  res.type('image/svg+xml').send(svg);
+});
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const input = registerSchema.parse(req.body);
@@ -71,8 +81,8 @@ app.post('/api/auth/register', async (req, res) => {
       select: { id: true, email: true },
     });
 
-    await createSession(res, user.id);
-    res.status(201).json({ user });
+    const session = await createSession(res, user.id);
+    res.status(201).json({ user, token: session.token, expiresAt: session.expiresAt.toISOString() });
   } catch (error) {
     handleError(error, res);
   }
@@ -91,8 +101,8 @@ app.post('/api/auth/login', async (req, res) => {
       return;
     }
 
-    await createSession(res, user.id);
-    res.json({ user: { id: user.id, email: user.email } });
+    const session = await createSession(res, user.id);
+    res.json({ user: { id: user.id, email: user.email }, token: session.token, expiresAt: session.expiresAt.toISOString() });
   } catch (error) {
     handleError(error, res);
   }
@@ -155,19 +165,26 @@ app.patch('/api/tasks/:id', requireAuth, async (req, res) => {
   try {
     const input = taskPatchSchema.parse(req.body);
     const taskId = readTaskId(req);
-    const task = await prisma.task.updateMany({
-      where: { id: taskId, userId: req.currentUser!.id },
-      data: input,
-    });
 
-    if (task.count === 0) {
+    if (Object.keys(input).length > 0) {
+      const task = await prisma.task.updateMany({
+        where: { id: taskId, userId: req.currentUser!.id },
+        data: input,
+      });
+
+      if (task.count === 0) {
+        res.status(404).json({ error: 'Task not found' });
+        return;
+      }
+    }
+
+    const updatedTask = await prisma.task.findFirst({
+      where: { id: taskId, userId: req.currentUser!.id },
+    });
+    if (!updatedTask) {
       res.status(404).json({ error: 'Task not found' });
       return;
     }
-
-    const updatedTask = await prisma.task.findFirstOrThrow({
-      where: { id: taskId, userId: req.currentUser!.id },
-    });
     res.json({ task: toTaskResponse(updatedTask) });
   } catch (error) {
     handleError(error, res);

@@ -61,6 +61,11 @@ export async function createSession(res: Response, userId: string) {
     secure: config.isProduction,
     path: '/',
   });
+
+  return {
+    expiresAt,
+    token,
+  };
 }
 
 export function clearSessionCookie(res: Response) {
@@ -73,7 +78,13 @@ export function clearSessionCookie(res: Response) {
 }
 
 export async function attachUser(req: Request, _res: Response, next: NextFunction) {
-  const token = req.cookies?.[config.cookieName];
+  const authorization = req.headers.authorization;
+  const bearerToken = authorization?.startsWith('Bearer ') ? authorization.slice('Bearer '.length).trim() : null;
+  const headerSessionToken = req.headers['x-session-token'];
+  const token =
+    bearerToken ??
+    (Array.isArray(headerSessionToken) ? headerSessionToken[0] : headerSessionToken) ??
+    req.cookies?.[config.cookieName];
   if (!token || typeof token !== 'string') {
     next();
     return;

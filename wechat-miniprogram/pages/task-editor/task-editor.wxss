@@ -1,0 +1,86 @@
+.editor-panel {
+  box-sizing: border-box;
+  padding: 30rpx;
+}
+
+.title {
+  color: #172033;
+  font-size: 38rpx;
+  font-weight: 800;
+  margin-bottom: 22rpx;
+}
+
+.field {
+  margin-top: 22rpx;
+}
+
+.field text {
+  color: #344054;
+  display: block;
+  font-size: 25rpx;
+  margin-bottom: 10rpx;
+}
+
+.field input,
+.field textarea {
+  background: #f8fafc;
+  border: 1rpx solid #dbe4ef;
+  border-radius: 14rpx;
+  box-sizing: border-box;
+  color: #172033;
+  padding: 0 22rpx;
+  width: 100%;
+}
+
+.field input {
+  height: 88rpx;
+}
+
+.field textarea {
+  min-height: 160rpx;
+  padding-top: 18rpx;
+}
+
+.color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx;
+  margin-top: 24rpx;
+}
+
+.color-swatch {
+  border: 5rpx solid #ffffff;
+  border-radius: 999rpx;
+  box-shadow: 0 0 0 1rpx #dbe4ef;
+  height: 54rpx;
+  width: 54rpx;
+}
+
+.color-swatch.selected {
+  box-shadow: 0 0 0 5rpx rgba(25, 118, 210, 0.18);
+}
+
+.slider-line {
+  align-items: center;
+  display: grid;
+  gap: 10rpx;
+  grid-template-columns: 70rpx 1fr 78rpx;
+  margin-top: 18rpx;
+}
+
+.slider-line text,
+.switch-row text {
+  color: #475467;
+  font-size: 25rpx;
+}
+
+.switch-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24rpx;
+}
+
+.submit-button {
+  margin-top: 36rpx;
+}

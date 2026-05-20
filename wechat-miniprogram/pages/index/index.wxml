@@ -1,0 +1,122 @@
+<view class="page home-page">
+  <view class="header" bindtap="closeAccountMenu">
+    <view class="top-row">
+    <view class="brand">
+      <view class="brand-mark">
+        <view></view>
+        <view></view>
+        <view></view>
+        <view></view>
+      </view>
+      <view>
+        <view class="title">Todo Matrix</view>
+        <view class="subtitle">重要 / 紧急坐标轴</view>
+      </view>
+    </view>
+
+      <view class="account-area">
+        <button wx:if="{{!user}}" class="outline-button compact-button" catchtap="openAuth">登录/注册</button>
+        <view wx:if="{{user}}" class="account-trigger" catchtap="toggleAccountMenu">
+          <view class="mode-chip cloud">
+            云端模式
+            <view wx:if="{{isSyncing}}" class="sync-dot"></view>
+          </view>
+          <text class="chevron">{{isAccountMenuOpen ? '▲' : '▼'}}</text>
+        </view>
+
+        <view wx:if="{{user && isAccountMenuOpen}}" class="account-menu" catchtap="noop">
+          <view class="menu-title">{{user.email}}</view>
+          <view class="menu-status">
+            <text>云端模式</text>
+            <view wx:if="{{isSyncing}}" class="menu-sync-dot"></view>
+          </view>
+          <view class="menu-item" catchtap="openChangePassword">修改密码</view>
+          <view class="menu-item danger" catchtap="handleLogout">退出登录</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="actions">
+      <button class="primary-button compact-button" bindtap="openCreateTask">添加任务</button>
+    </view>
+  </view>
+
+  <view class="panel axis-panel">
+    <view class="panel-heading">
+      <view>
+        <view class="section-title">坐标轴</view>
+        <view class="section-subtitle">拖动节点调整重要程度和紧急程度</view>
+      </view>
+      <view class="axis-count">{{stats.shownOnAxis}} 项</view>
+    </view>
+    <canvas
+      id="axisCanvas"
+      canvas-id="axisCanvas"
+      class="axis-canvas"
+      disable-scroll="true"
+      bindtouchstart="handleAxisTouchStart"
+      catchtouchmove="handleAxisTouchMove"
+      bindtouchend="handleAxisTouchEnd"
+      bindtouchcancel="handleAxisTouchEnd"
+    ></canvas>
+  </view>
+
+  <view class="panel list-panel">
+    <view class="filter-row">
+      <view class="filter-button {{filter == 'all' ? 'active' : ''}}" data-filter="all" bindtap="handleFilterTap">全部</view>
+      <view class="filter-button {{filter == 'active' ? 'active' : ''}}" data-filter="active" bindtap="handleFilterTap">进行中</view>
+      <view class="filter-button {{filter == 'completed' ? 'active' : ''}}" data-filter="completed" bindtap="handleFilterTap">已完成</view>
+      <view class="filter-button {{filter == 'axis' ? 'active' : ''}}" data-filter="axis" bindtap="handleFilterTap">坐标轴</view>
+    </view>
+
+    <view class="stats-row">
+      <text>{{stats.active}} 进行中</text>
+      <text>{{stats.completed}} 已完成</text>
+      <text>{{stats.total}} 总计</text>
+    </view>
+
+    <view wx:if="{{storageError}}" class="error-box">{{storageError}}</view>
+    <view wx:if="{{isLoading}}" class="loading-box">正在读取数据...</view>
+
+    <view wx:if="{{!isLoading && visibleTasks.length == 0}}" class="empty-box">
+      暂无任务
+    </view>
+
+    <view wx:for="{{visibleTasks}}" wx:key="id" class="task-card">
+      <view class="task-main">
+        <view class="task-color" style="background-color: {{item.color}};"></view>
+        <view class="task-title-wrap" data-id="{{item.id}}" bindtap="toggleExpand">
+          <view class="task-title {{item.completed ? 'done' : ''}}">
+            {{item.progress > 0 ? item.progress + '% ' : ''}}{{item.title}}
+          </view>
+          <view class="task-meta">重要 {{item.importance}} · 紧急 {{item.urgency}}</view>
+        </view>
+        <button class="mini-button" data-id="{{item.id}}" bindtap="toggleTask">{{item.completed ? '恢复' : '完成'}}</button>
+      </view>
+
+      <view wx:if="{{expandedTaskId == item.id}}" class="task-detail">
+        <view wx:if="{{item.notes}}" class="task-notes">{{item.notes}}</view>
+        <view class="slider-line">
+          <text>重要</text>
+          <slider min="0" max="100" value="{{item.importance}}" data-id="{{item.id}}" data-field="importance" bindchange="handleMetricChange" activeColor="{{item.color}}" />
+          <text>{{item.importance}}</text>
+        </view>
+        <view class="slider-line">
+          <text>紧急</text>
+          <slider min="0" max="100" value="{{item.urgency}}" data-id="{{item.id}}" data-field="urgency" bindchange="handleMetricChange" activeColor="{{item.color}}" />
+          <text>{{item.urgency}}</text>
+        </view>
+        <view class="slider-line">
+          <text>进度</text>
+          <slider min="0" max="100" value="{{item.progress}}" data-id="{{item.id}}" data-field="progress" bindchange="handleMetricChange" activeColor="{{item.color}}" />
+          <text>{{item.progress}}%</text>
+        </view>
+        <view class="task-buttons">
+          <button class="outline-button compact-button" data-id="{{item.id}}" bindtap="toggleAxis">{{item.showOnAxis ? '隐藏坐标' : '显示坐标'}}</button>
+          <button class="outline-button compact-button" data-id="{{item.id}}" bindtap="openEditTask">编辑</button>
+          <button class="danger-button compact-button" data-id="{{item.id}}" bindtap="requestDeleteTask">删除</button>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

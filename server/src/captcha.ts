@@ -6,6 +6,7 @@ const CAPTCHA_TTL_MS = 5 * 60 * 1000;
 interface CaptchaRecord {
   answer: string;
   expiresAt: number;
+  svg: string;
 }
 
 const captchaStore = new Map<string, CaptchaRecord>();
@@ -71,13 +72,19 @@ export function createCaptchaChallenge() {
   const expiresAt = Date.now() + CAPTCHA_TTL_MS;
   const svg = createSvgCaptcha(answer);
 
-  captchaStore.set(id, { answer, expiresAt });
+  captchaStore.set(id, { answer, expiresAt, svg });
 
   return {
+    expiresAt: new Date(expiresAt).toISOString(),
     id,
     image: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
-    expiresAt: new Date(expiresAt).toISOString(),
+    imageUrl: `/api/auth/captcha/${id}.svg`,
   };
+}
+
+export function readCaptchaImage(id: string) {
+  cleanupExpiredCaptchas();
+  return captchaStore.get(id)?.svg ?? null;
 }
 
 export function verifyCaptchaChallenge(id: string, answer: string) {
