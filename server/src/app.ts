@@ -108,7 +108,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/logout', requireAuth, async (req, res) => {
+app.post('/api/auth/logout', async (req, res) => {
   if (req.sessionTokenHash) {
     await prisma.session.delete({ where: { tokenHash: req.sessionTokenHash } }).catch(() => undefined);
   }
