@@ -8,6 +8,7 @@
     "dev:client": "vite --host 127.0.0.1 --configLoader runner",
     "dev:server": "tsx watch server/src/index.ts",
     "build": "tsc -b && vite build",
+    "build:wechat": "node scripts/build-wechat-miniprogram.mjs",
     "preview": "vite preview --host 127.0.0.1",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

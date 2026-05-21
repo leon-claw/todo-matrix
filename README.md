@@ -254,6 +254,27 @@ API_BASE_URL: 'http://127.0.0.1:3001/api'
 - 在微信公众平台配置“request 合法域名”。
 - 后端部署 HTTPS，并确保 `/api/auth/captcha/:id.svg`、登录注册、任务接口都能访问。
 
+也可以保留源码里的本地开发地址，使用构建命令生成生产目录：
+
+```powershell
+npm run build:wechat
+```
+
+默认会生成 `wechat-miniprogram/dist`，并把 `config.js` 中的 API 地址替换为：
+
+```text
+https://web.jianghong.site/app/todo-matrix/api
+```
+
+如果要临时指定其他生产 API：
+
+```powershell
+$env:WECHAT_API_BASE_URL="https://example.com/app/todo-matrix/api"
+npm run build:wechat
+```
+
+之后用微信开发者工具导入 `wechat-miniprogram/dist` 目录，再上传发布。
+
 ### 登录会话说明
 
 Web 端继续使用 HttpOnly Cookie。小程序端无法依赖浏览器 Cookie，所以登录和注册接口会额外返回 `token`，小程序保存到本地 storage，并在后续请求里通过：
