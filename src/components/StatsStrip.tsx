@@ -55,8 +55,8 @@ export function StatsStrip({
         sx={{
           alignItems: 'stretch',
           display: 'grid',
-          gap: 1,
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, minmax(0, 1fr))' },
+          gap: { xs: 0.75, sm: 1 },
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
           '& .MuiToggleButtonGroup-grouped': {
             border: 1,
             borderColor: 'divider',
@@ -69,14 +69,31 @@ export function StatsStrip({
           const Icon = option.icon;
 
           return (
-            <ToggleButton key={option.id} value={option.id} sx={{ justifyContent: 'flex-start', px: 1.5, py: 1.25 }}>
-              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', width: '100%' }}>
+            <ToggleButton
+              key={option.id}
+              value={option.id}
+              sx={{
+                justifyContent: { xs: 'center', sm: 'flex-start' },
+                minWidth: 0,
+                px: { xs: 0.5, sm: 1.5 },
+                py: { xs: 0.8, sm: 1.25 },
+              }}
+            >
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={{ xs: 0.25, sm: 1.25 }}
+                sx={{ alignItems: 'center', minWidth: 0, width: '100%' }}
+              >
                 <Icon fontSize="small" />
-                <Box sx={{ minWidth: 0, textAlign: 'left' }}>
-                  <Typography sx={{ lineHeight: 1 }} variant="h6">
+                <Box sx={{ minWidth: 0, textAlign: { xs: 'center', sm: 'left' } }}>
+                  <Typography sx={{ display: { xs: 'none', sm: 'block' }, lineHeight: 1 }} variant="h6">
                     {counts[option.id]}
                   </Typography>
-                  <Typography color="text.secondary" sx={{ fontWeight: 700, lineHeight: 1.2 }} variant="caption">
+                  <Typography
+                    color="text.secondary"
+                    sx={{ display: 'block', fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    variant="caption"
+                  >
                     {option.label}
                   </Typography>
                 </Box>

@@ -14,6 +14,8 @@ import {
   Paper,
 } from '@mui/material';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import DeleteSweepRoundedIcon from '@mui/icons-material/DeleteSweepRounded';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { AppHeader } from './components/AppHeader';
 import { AuthPanel } from './components/AuthPanel';
 import { ChangePasswordPanel } from './components/ChangePasswordPanel';
@@ -31,6 +33,8 @@ import type { MatrixTask, TaskFilter, TaskFormValues, TaskMetrics } from './type
 type EditorState =
   | { mode: 'create'; task: null }
   | { mode: 'edit'; task: MatrixTask };
+
+const taskEditorFormId = 'task-editor-form';
 
 export function App() {
   const {
@@ -51,17 +55,33 @@ export function App() {
   const activeStore = isCloudMode ? cloudStore : localStore;
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MatrixTask | null>(null);
+  const [clearCompletedDialogOpen, setClearCompletedDialogOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState<TaskFilter>('active');
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
   const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
   const [isPasswordChanging, setIsPasswordChanging] = useState(false);
   const [migrationBusy, setMigrationBusy] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
 
   useEffect(() => {
     setLocalDataResolved(false);
     setTaskFilter('active');
   }, [user?.id]);
+
+  useEffect(() => {
+    const updateOnlineState = () => {
+      setIsOnline(navigator.onLine);
+    };
+
+    window.addEventListener('online', updateOnlineState);
+    window.addEventListener('offline', updateOnlineState);
+
+    return () => {
+      window.removeEventListener('online', updateOnlineState);
+      window.removeEventListener('offline', updateOnlineState);
+    };
+  }, []);
 
   const visibleTasks = useMemo(() => {
     const tasks = activeStore.tasks;
@@ -121,6 +141,11 @@ export function App() {
 
     await activeStore.deleteTask(deleteTarget.id);
     setDeleteTarget(null);
+  }
+
+  async function confirmClearCompletedTasks() {
+    await activeStore.clearCompletedTasks();
+    setClearCompletedDialogOpen(false);
   }
 
   async function handleLogin(email: string, password: string) {
@@ -195,6 +220,8 @@ export function App() {
   }
 
   function renderTodoSurface() {
+    const showClearCompletedAction = taskFilter === 'all' || taskFilter === 'completed';
+
     if (migrationRequired) {
       return (
         <DataResolutionPanel
@@ -248,6 +275,21 @@ export function App() {
             total={activeStore.stats.total}
           />
 
+          {showClearCompletedAction ? (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                color="error"
+                disabled={activeStore.stats.completed === 0}
+                onClick={() => setClearCompletedDialogOpen(true)}
+                size="small"
+                startIcon={<DeleteSweepRoundedIcon />}
+                variant="outlined"
+              >
+                清除所有已完成
+              </Button>
+            </Box>
+          ) : null}
+
           {activeStore.isLoading || isAuthLoading ? (
             <Paper
               variant="outlined"
@@ -293,6 +335,12 @@ export function App() {
         onLogout={handleLogout}
         user={user}
       />
+
+      {!isOnline ? (
+        <Alert severity="warning" variant="filled" sx={{ mb: 2 }}>
+          当前处于离线状态，云端同步会在网络恢复后继续尝试。
+        </Alert>
+      ) : null}
 
       {renderTodoSurface()}
 
@@ -342,26 +390,78 @@ export function App() {
         fullWidth
         maxWidth="sm"
         open={Boolean(editorState)}
-        onClose={closeEditor}
-        slotProps={{ paper: { sx: { borderRadius: 3 } } }}
+        onClose={(_, reason) => {
+          if (reason !== 'backdropClick' && reason !== 'escapeKeyDown') {
+            closeEditor();
+          }
+        }}
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              display: 'flex',
+              maxHeight: { xs: 'calc(100dvh - 24px)', sm: 'min(760px, calc(100dvh - 64px))' },
+              minHeight: 0,
+              overflow: 'hidden',
+            },
+          },
+        }}
       >
-        <IconButton
-          aria-label="关闭"
-          onClick={closeEditor}
-          sx={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
+        <DialogTitle
+          sx={{
+            alignItems: 'center',
+            bgcolor: 'background.paper',
+            borderBottom: 1,
+            borderColor: 'divider',
+            display: 'flex',
+            justifyContent: 'space-between',
+            px: { xs: 2.5, sm: 3 },
+            py: { xs: 1.75, sm: 2 },
+            position: 'sticky',
+            top: 0,
+            zIndex: 2,
+          }}
         >
-          <CloseRoundedIcon fontSize="small" />
-        </IconButton>
-        <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
+          {editorState?.mode === 'create' ? '添加任务' : '编辑任务'}
+          <IconButton aria-label="关闭" onClick={closeEditor} size="small">
+            <CloseRoundedIcon fontSize="small" />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ flex: 1, overflowY: 'auto', p: { xs: 2.5, sm: 3 } }}>
           {editorState ? (
             <TaskComposer
+              formId={taskEditorFormId}
               initialTask={editorState.task}
               mode={editorState.mode}
-              onCancel={closeEditor}
               onSubmit={handleSubmitTask}
             />
           ) : null}
         </DialogContent>
+        <DialogActions
+          sx={{
+            bgcolor: 'background.paper',
+            borderColor: 'divider',
+            borderTop: 1,
+            bottom: 0,
+            px: { xs: 2.5, sm: 3 },
+            py: { xs: 1.75, sm: 2 },
+            position: 'sticky',
+            zIndex: 2,
+          }}
+        >
+          <Button onClick={closeEditor} type="button" variant="outlined">
+            取消
+          </Button>
+          <Button
+            disableElevation
+            form={taskEditorFormId}
+            startIcon={<SaveRoundedIcon />}
+            type="submit"
+            variant="contained"
+          >
+            {editorState?.mode === 'create' ? '添加任务' : '保存修改'}
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
@@ -377,6 +477,23 @@ export function App() {
           </Button>
           <Button color="error" onClick={confirmDeleteTask} variant="contained">
             确认删除
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={clearCompletedDialogOpen} onClose={() => setClearCompletedDialogOpen(false)}>
+        <DialogTitle>清除所有已完成？</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            将清除当前列表中所有已完成 Todo。这个操作无法撤销。
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setClearCompletedDialogOpen(false)} variant="outlined">
+            取消
+          </Button>
+          <Button color="error" onClick={confirmClearCompletedTasks} variant="contained">
+            清除已完成
           </Button>
         </DialogActions>
       </Dialog>

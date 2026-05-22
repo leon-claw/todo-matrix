@@ -1,34 +1,36 @@
 import {
   Box,
-  Button,
   ButtonBase,
-  Checkbox,
   FormControlLabel,
   Slider,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
-import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import { FormEvent, useEffect, useState } from 'react';
 import { DEFAULT_TASK_COLOR, TASK_COLOR_PRESETS } from '../constants/taskAppearance';
+import { calculateSubtaskProgress, normalizeSubtasks } from '../lib/subtasks';
+import { SubtasksEditor } from './SubtasksEditor';
 import type { MatrixTask, TaskFormValues } from '../types';
 
 interface TaskComposerProps {
+  formId?: string;
   initialTask?: MatrixTask | null;
   mode: 'create' | 'edit';
-  onCancel: () => void;
   onSubmit: (task: TaskFormValues) => void;
 }
 
 const emptyTask: TaskFormValues = {
   title: '',
   notes: '',
+  subtasks: [],
   importance: 60,
   urgency: 50,
   color: DEFAULT_TASK_COLOR,
   progress: 0,
+  autoProgress: false,
   showOnAxis: true,
 };
 
@@ -40,18 +42,19 @@ function getInitialValues(task?: MatrixTask | null): TaskFormValues {
   return {
     title: task.title,
     notes: task.notes,
+    subtasks: task.subtasks,
     importance: task.importance,
     urgency: task.urgency,
     color: task.color,
     progress: task.progress,
+    autoProgress: task.autoProgress,
     showOnAxis: task.showOnAxis,
   };
 }
 
 export function TaskComposer({
+  formId,
   initialTask,
-  mode,
-  onCancel,
   onSubmit,
 }: TaskComposerProps) {
   const [values, setValues] = useState<TaskFormValues>(() => getInitialValues(initialTask));
@@ -61,7 +64,17 @@ export function TaskComposer({
   }, [initialTask]);
 
   function updateValue<Key extends keyof TaskFormValues>(key: Key, value: TaskFormValues[Key]) {
-    setValues((current) => ({ ...current, [key]: value }));
+    setValues((current) => {
+      const nextValues = { ...current, [key]: value };
+      if (nextValues.autoProgress) {
+        return {
+          ...nextValues,
+          progress: calculateSubtaskProgress(normalizeSubtasks(nextValues.subtasks)),
+        };
+      }
+
+      return nextValues;
+    });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -71,15 +84,13 @@ export function TaskComposer({
       return;
     }
 
-    onSubmit(values);
+    const subtasks = normalizeSubtasks(values.subtasks);
+    const progress = values.autoProgress ? calculateSubtaskProgress(subtasks) : values.progress;
+    onSubmit({ ...values, progress, subtasks });
   }
 
   return (
-    <Stack component="form" spacing={2.25} onSubmit={handleSubmit}>
-      <Box>
-        <Typography variant="h2">{mode === 'create' ? '添加任务' : '编辑任务'}</Typography>
-      </Box>
-
+    <Stack component="form" id={formId} spacing={1.5} onSubmit={handleSubmit}>
       <TextField
         autoComplete="off"
         autoFocus
@@ -91,19 +102,10 @@ export function TaskComposer({
         value={values.title}
       />
 
-      <TextField
-        fullWidth
-        label="备注"
-        multiline
-        onChange={(event) => updateValue('notes', event.target.value)}
-        placeholder="补充上下文、负责人或下一步动作"
-        rows={3}
-        slotProps={{ htmlInput: { maxLength: 180 } }}
-        value={values.notes}
-      />
+      <SubtasksEditor subtasks={values.subtasks} onChange={(nextSubtasks) => updateValue('subtasks', nextSubtasks)} />
 
       <Box>
-        <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 1 }} variant="caption">
+        <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.75 }} variant="caption">
           颜色标签
         </Typography>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
@@ -147,9 +149,9 @@ export function TaskComposer({
         </Stack>
       </Box>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+          <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.25 }} variant="caption">
             重要程度 {values.importance}
           </Typography>
           <Slider
@@ -162,7 +164,7 @@ export function TaskComposer({
           />
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+          <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.25 }} variant="caption">
             紧急程度 {values.urgency}
           </Typography>
           <Slider
@@ -174,51 +176,61 @@ export function TaskComposer({
             onChange={(_, value) => updateValue('urgency', Array.isArray(value) ? value[0] : value)}
           />
         </Box>
-      </Stack>
-
-      <Box>
-        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
-          <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
-            进度
-          </Typography>
-          <Typography color="text.secondary" variant="caption">
-            {values.progress}%
-          </Typography>
-        </Stack>
-        <Slider
-          aria-label="进度"
-          max={100}
-          min={0}
-          value={values.progress}
-          valueLabelDisplay="auto"
-          onChange={(_, value) => updateValue('progress', Array.isArray(value) ? value[0] : value)}
-        />
-      </Box>
-
-      <FormControlLabel
-        control={
-          <Checkbox
-            checked={values.showOnAxis}
-            onChange={(event) => updateValue('showOnAxis', event.target.checked)}
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
+            <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
+              进度
+            </Typography>
+            <Typography color="text.secondary" variant="caption">
+              {values.progress}%
+            </Typography>
+          </Stack>
+          <Slider
+            aria-label="进度"
+            disabled={values.autoProgress}
+            max={100}
+            min={0}
+            value={values.progress}
+            valueLabelDisplay="auto"
+            onChange={(_, value) => updateValue('progress', Array.isArray(value) ? value[0] : value)}
           />
-        }
-        label="显示在坐标轴中"
-      />
-
-      <Stack direction="row" spacing={1.25} sx={{ justifyContent: 'flex-end', pt: 1 }}>
-        <Button onClick={onCancel} type="button" variant="outlined">
-          取消
-        </Button>
-        <Button
-          disableElevation
-          disabled={!values.title.trim()}
-          startIcon={<SaveRoundedIcon />}
-          type="submit"
-          variant="contained"
-        >
-          {mode === 'create' ? '添加任务' : '保存修改'}
-        </Button>
+        </Box>
       </Stack>
+
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={values.showOnAxis}
+              onChange={(event) => updateValue('showOnAxis', event.target.checked)}
+              size="small"
+            />
+          }
+          label="显示在坐标轴中"
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={values.autoProgress}
+              onChange={(event) => updateValue('autoProgress', event.target.checked)}
+              size="small"
+            />
+          }
+          label="自动统计进度"
+        />
+      </Stack>
+
+      <TextField
+        fullWidth
+        label="备注"
+        multiline
+        onChange={(event) => updateValue('notes', event.target.value)}
+        placeholder="补充上下文、负责人或下一步动作"
+        minRows={3}
+        maxRows={8}
+        slotProps={{ htmlInput: { maxLength: 1000 } }}
+        value={values.notes}
+      />
     </Stack>
   );
 }

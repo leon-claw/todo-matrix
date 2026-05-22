@@ -18,8 +18,9 @@ import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
-import { useState } from 'react';
+import { type MouseEvent, useState } from 'react';
 import type { MatrixTask, TaskMetrics } from '../types';
+import { SubtasksPreview } from './SubtasksPreview';
 
 interface TaskCardProps {
   task: MatrixTask;
@@ -39,6 +40,10 @@ export function TaskCard({
   onToggleAxis,
 }: TaskCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  function stopClickPropagation(event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+  }
 
   return (
     <Paper
@@ -70,15 +75,18 @@ export function TaskCard({
         <Tooltip title={task.completed ? '标记为未完成' : '标记为完成'}>
           <IconButton
             aria-label={task.completed ? '标记为未完成' : '标记为完成'}
-            onClick={() => onToggle(task.id)}
+            onClick={(event) => {
+              stopClickPropagation(event);
+              onToggle(task.id);
+            }}
             size="small"
-            sx={{ color: task.completed ? 'success.main' : task.color }}
+            sx={{ color: task.completed ? 'success.main' : task.color, position: 'relative', zIndex: 2 }}
           >
             {task.completed ? <CheckCircleRoundedIcon /> : <RadioButtonUncheckedRoundedIcon />}
           </IconButton>
         </Tooltip>
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
           <ButtonBase
             aria-expanded={isExpanded}
             onClick={() => setIsExpanded((current) => !current)}
@@ -91,17 +99,6 @@ export function TaskCard({
             }}
           >
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <Box
-                aria-hidden="true"
-                sx={{
-                  bgcolor: task.color,
-                  borderRadius: '50%',
-                  boxShadow: '0 0 0 3px rgba(15, 23, 42, 0.04)',
-                  flex: '0 0 auto',
-                  height: 10,
-                  width: 10,
-                }}
-              />
               <Typography
                 component="h3"
                 sx={{
@@ -116,90 +113,30 @@ export function TaskCard({
               </Typography>
             </Stack>
           </ButtonBase>
-
-          <Collapse in={isExpanded} timeout={180} unmountOnExit>
-            <Box sx={{ pt: 1 }}>
-              {task.notes ? (
-                <Typography color="text.secondary" sx={{ overflowWrap: 'anywhere' }} variant="body2">
-                  {task.notes}
-                </Typography>
-              ) : null}
-
-              <Divider sx={{ my: 1.5 }} />
-
-              <Stack spacing={1.75}>
-                <Box>
-                  <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
-                    <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
-                      进度
-                    </Typography>
-                    <Typography color="text.secondary" variant="caption">
-                      {task.progress}%
-                    </Typography>
-                  </Stack>
-                  <Slider
-                    aria-label="进度"
-                    max={100}
-                    min={0}
-                    size="small"
-                    sx={{ color: task.color }}
-                    value={task.progress}
-                    valueLabelDisplay="auto"
-                    onChange={(_, value) =>
-                      onMetricsChange(task.id, { progress: Array.isArray(value) ? value[0] : value })
-                    }
-                  />
-                </Box>
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
-                      重要程度 {task.importance}
-                    </Typography>
-                    <Slider
-                      aria-label="重要程度"
-                      max={100}
-                      min={0}
-                      size="small"
-                      value={task.importance}
-                      onChange={(_, value) =>
-                        onMetricsChange(task.id, { importance: Array.isArray(value) ? value[0] : value })
-                      }
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
-                      紧急程度 {task.urgency}
-                    </Typography>
-                    <Slider
-                      aria-label="紧急程度"
-                      max={100}
-                      min={0}
-                      size="small"
-                      value={task.urgency}
-                      onChange={(_, value) =>
-                        onMetricsChange(task.id, { urgency: Array.isArray(value) ? value[0] : value })
-                      }
-                    />
-                  </Box>
-                </Stack>
-              </Stack>
-            </Box>
-          </Collapse>
         </Box>
 
-        <Stack direction="row" spacing={0.5} sx={{ flex: '0 0 auto' }}>
+        <Stack direction="row" spacing={0.5} sx={{ flex: '0 0 auto', position: 'relative', zIndex: 2 }}>
           <Tooltip title={isExpanded ? '折叠任务' : '展开任务'}>
             <IconButton
               aria-label={isExpanded ? '折叠任务' : '展开任务'}
-              onClick={() => setIsExpanded((current) => !current)}
+              onClick={(event) => {
+                stopClickPropagation(event);
+                setIsExpanded((current) => !current);
+              }}
               size="small"
             >
               {isExpanded ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
             </IconButton>
           </Tooltip>
           <Tooltip title="编辑任务">
-            <IconButton aria-label="编辑任务" onClick={() => onEdit(task)} size="small">
+            <IconButton
+              aria-label="编辑任务"
+              onClick={(event) => {
+                stopClickPropagation(event);
+                onEdit(task);
+              }}
+              size="small"
+            >
               <EditRoundedIcon />
             </IconButton>
           </Tooltip>
@@ -207,19 +144,105 @@ export function TaskCard({
             <IconButton
               aria-label={task.showOnAxis ? '从坐标轴隐藏' : '显示在坐标轴中'}
               color={task.showOnAxis ? 'primary' : 'default'}
-              onClick={() => onToggleAxis(task.id)}
+              onClick={(event) => {
+                stopClickPropagation(event);
+                onToggleAxis(task.id);
+              }}
               size="small"
             >
               {task.showOnAxis ? <VisibilityRoundedIcon /> : <VisibilityOffRoundedIcon />}
             </IconButton>
           </Tooltip>
           <Tooltip title="删除任务">
-            <IconButton aria-label="删除任务" color="error" onClick={() => onDelete(task.id)} size="small">
+            <IconButton
+              aria-label="删除任务"
+              color="error"
+              onClick={(event) => {
+                stopClickPropagation(event);
+                onDelete(task.id);
+              }}
+              size="small"
+            >
               <DeleteOutlineRoundedIcon />
             </IconButton>
           </Tooltip>
         </Stack>
       </Stack>
+
+      <Collapse in={isExpanded} timeout={180} unmountOnExit sx={{ width: '100%' }}>
+        <Box sx={{ maxWidth: '100%', px: { xs: 1.75, sm: 2 }, pb: 1.5, width: '100%' }}>
+          {task.subtasks.length ? <SubtasksPreview subtasks={task.subtasks} /> : null}
+          {task.notes ? (
+            <Typography
+              color="text.secondary"
+              sx={{ mt: task.subtasks.length ? 1 : 0, overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}
+              variant="body2"
+            >
+              {task.notes}
+            </Typography>
+          ) : null}
+
+          <Divider sx={{ my: 1.5 }} />
+
+          <Stack spacing={1.75}>
+            <Box>
+              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
+                <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
+                  进度
+                </Typography>
+                <Typography color="text.secondary" variant="caption">
+                  {task.progress}%
+                </Typography>
+              </Stack>
+              <Slider
+                aria-label="进度"
+                disabled={task.autoProgress}
+                max={100}
+                min={0}
+                size="small"
+                value={task.progress}
+                valueLabelDisplay="auto"
+                onChange={(_, value) =>
+                  onMetricsChange(task.id, { progress: Array.isArray(value) ? value[0] : value })
+                }
+              />
+            </Box>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+                  重要程度 {task.importance}
+                </Typography>
+                <Slider
+                  aria-label="重要程度"
+                  max={100}
+                  min={0}
+                  size="small"
+                  value={task.importance}
+                  onChange={(_, value) =>
+                    onMetricsChange(task.id, { importance: Array.isArray(value) ? value[0] : value })
+                  }
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
+                  紧急程度 {task.urgency}
+                </Typography>
+                <Slider
+                  aria-label="紧急程度"
+                  max={100}
+                  min={0}
+                  size="small"
+                  value={task.urgency}
+                  onChange={(_, value) =>
+                    onMetricsChange(task.id, { urgency: Array.isArray(value) ? value[0] : value })
+                  }
+                />
+              </Box>
+            </Stack>
+          </Stack>
+        </Box>
+      </Collapse>
     </Paper>
   );
 }

@@ -11,8 +11,9 @@ import {
   registerSchema,
   taskInputSchema,
   taskPatchSchema,
+  taskSyncSchema,
 } from './schemas';
-import { toTaskCreateInput, toTaskResponse } from './tasks';
+import { calculateSubtaskProgress, normalizeSubtasks, toTaskCreateInput, toTaskResponse } from './tasks';
 
 export const app = express();
 
@@ -161,15 +162,79 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
   }
 });
 
+app.put('/api/tasks/sync', requireAuth, async (req, res) => {
+  try {
+    const input = taskSyncSchema.parse(req.body);
+    const userId = req.currentUser!.id;
+    const taskIds = input.tasks.map((task) => task.id);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.task.deleteMany({
+        where: {
+          userId,
+          ...(taskIds.length ? { id: { notIn: taskIds } } : {}),
+        },
+      });
+
+      for (const task of input.tasks) {
+        const createData = toTaskCreateInput(userId, task);
+        const { userId: _userId, ...updateData } = createData;
+        const updated = await tx.task.updateMany({
+          where: { id: task.id, userId },
+          data: updateData,
+        });
+
+        if (updated.count === 0) {
+          await tx.task.create({
+            data: {
+              ...createData,
+              id: task.id,
+              ...(task.createdAt ? { createdAt: new Date(task.createdAt) } : {}),
+            },
+          });
+        }
+      }
+    });
+
+    const tasks = await prisma.task.findMany({
+      where: { userId },
+      orderBy: [{ completed: 'asc' }, { updatedAt: 'desc' }],
+    });
+    res.json({ tasks: tasks.map(toTaskResponse) });
+  } catch (error) {
+    handleError(error, res);
+  }
+});
+
 app.patch('/api/tasks/:id', requireAuth, async (req, res) => {
   try {
     const input = taskPatchSchema.parse(req.body);
     const taskId = readTaskId(req);
+    const data = { ...input };
 
-    if (Object.keys(input).length > 0) {
+    if (data.autoProgress !== undefined || data.subtasks !== undefined) {
+      const currentTask = await prisma.task.findFirst({
+        where: { id: taskId, userId: req.currentUser!.id },
+      });
+
+      if (!currentTask) {
+        res.status(404).json({ error: 'Task not found' });
+        return;
+      }
+
+      const subtasks = normalizeSubtasks(data.subtasks ?? currentTask.subtasks);
+      const autoProgress = data.autoProgress ?? currentTask.autoProgress;
+      data.subtasks = subtasks;
+
+      if (autoProgress) {
+        data.progress = calculateSubtaskProgress(subtasks);
+      }
+    }
+
+    if (Object.keys(data).length > 0) {
       const task = await prisma.task.updateMany({
         where: { id: taskId, userId: req.currentUser!.id },
-        data: input,
+        data,
       });
 
       if (task.count === 0) {

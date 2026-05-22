@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DEFAULT_TASK_COLOR } from '../constants/taskAppearance';
 import { clearTasks, loadTasks, saveTasks } from '../lib/localDatabase';
+import { calculateSubtaskProgress, normalizeSubtasks } from '../lib/subtasks';
 import { clampMetric, sortTasks } from '../lib/taskUtils';
 import type { MatrixTask, TaskFormValues, TaskMetrics } from '../types';
 
@@ -24,15 +25,19 @@ function normalizeColor(value: string | undefined) {
 
 function normalizeTask(task: StoredTask): MatrixTask {
   const timestamp = new Date().toISOString();
+  const subtasks = normalizeSubtasks(task.subtasks);
+  const autoProgress = task.autoProgress ?? false;
 
   return {
     id: task.id,
     title: task.title,
     notes: task.notes ?? '',
+    subtasks,
     importance: clampMetric(task.importance, 50),
     urgency: clampMetric(task.urgency, 50),
     color: normalizeColor(task.color),
-    progress: clampMetric(task.progress, 0),
+    progress: autoProgress ? calculateSubtaskProgress(subtasks) : clampMetric(task.progress, 0),
+    autoProgress,
     showOnAxis: task.showOnAxis ?? true,
     completed: task.completed ?? false,
     createdAt: task.createdAt ?? timestamp,
@@ -100,14 +105,18 @@ export function useLocalTasks() {
   const addTask = useCallback(
     (input: TaskFormValues) => {
       const timestamp = new Date().toISOString();
+      const subtasks = normalizeSubtasks(input.subtasks);
+      const autoProgress = input.autoProgress;
       const nextTask: MatrixTask = {
         id: createId(),
         title: input.title.trim(),
         notes: input.notes.trim(),
+        subtasks,
         importance: clampMetric(input.importance, 50),
         urgency: clampMetric(input.urgency, 50),
         color: normalizeColor(input.color),
-        progress: clampMetric(input.progress, 0),
+        progress: autoProgress ? calculateSubtaskProgress(subtasks) : clampMetric(input.progress, 0),
+        autoProgress,
         showOnAxis: input.showOnAxis,
         completed: false,
         createdAt: timestamp,
@@ -122,6 +131,8 @@ export function useLocalTasks() {
   const updateTask = useCallback(
     (taskId: string, input: TaskFormValues) => {
       const timestamp = new Date().toISOString();
+      const subtasks = normalizeSubtasks(input.subtasks);
+      const autoProgress = input.autoProgress;
       commit(
         tasks.map((task) =>
           task.id === taskId
@@ -129,10 +140,12 @@ export function useLocalTasks() {
                 ...task,
                 title: input.title.trim(),
                 notes: input.notes.trim(),
+                subtasks,
                 importance: clampMetric(input.importance, task.importance),
                 urgency: clampMetric(input.urgency, task.urgency),
                 color: normalizeColor(input.color),
-                progress: clampMetric(input.progress, task.progress),
+                progress: autoProgress ? calculateSubtaskProgress(subtasks) : clampMetric(input.progress, task.progress),
+                autoProgress,
                 showOnAxis: input.showOnAxis,
                 updatedAt: timestamp,
               }
@@ -167,7 +180,7 @@ export function useLocalTasks() {
                 ...task,
                 importance: clampMetric(metrics.importance, task.importance),
                 urgency: clampMetric(metrics.urgency, task.urgency),
-                progress: clampMetric(metrics.progress, task.progress),
+                progress: task.autoProgress ? calculateSubtaskProgress(task.subtasks) : clampMetric(metrics.progress, task.progress),
                 updatedAt: timestamp,
               }
             : task,
@@ -197,6 +210,10 @@ export function useLocalTasks() {
     },
     [commit, tasks],
   );
+
+  const clearCompletedTasks = useCallback(() => {
+    commit(tasks.filter((task) => !task.completed));
+  }, [commit, tasks]);
 
   const clearLocalTasks = useCallback(async () => {
     setTasks([]);
@@ -230,6 +247,7 @@ export function useLocalTasks() {
     updateTaskMetrics,
     toggleAxisVisibility,
     deleteTask,
+    clearCompletedTasks,
     clearLocalTasks,
   };
 }

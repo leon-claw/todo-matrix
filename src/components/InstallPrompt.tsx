@@ -24,7 +24,7 @@ function isStandaloneMode() {
   );
 }
 
-export function InstallPrompt() {
+function InstallPromptContent() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
 
@@ -88,9 +88,6 @@ export function InstallPrompt() {
               <ListItemText primary="iPhone / iPad Safari" secondary="点击分享按钮，选择“添加到主屏幕”。iOS 通常不会触发网页内安装弹窗。" />
             </ListItem>
           </List>
-          <Typography color="text.secondary" variant="caption">
-            安装能力通常要求使用 HTTPS，localhost 开发环境除外。生产部署时请确保 service worker 和 manifest 可以正常访问。
-          </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setShowInstallHelp(false)} variant="contained">
@@ -100,4 +97,12 @@ export function InstallPrompt() {
       </Dialog>
     </>
   );
+}
+
+export function InstallPrompt() {
+  if (window.todoMatrixDesktop?.isDesktop) {
+    return null;
+  }
+
+  return <InstallPromptContent />;
 }

@@ -36,10 +36,12 @@ model Task {
   userId     String   @map("user_id")
   title      String   @db.VarChar(120)
   notes      String   @db.Text
+  subtasks   Json     @default("[]")
   importance Int
   urgency    Int
   color      String   @db.VarChar(16)
   progress   Int
+  autoProgress Boolean @default(false) @map("auto_progress")
   showOnAxis Boolean  @default(true) @map("show_on_axis")
   completed  Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
