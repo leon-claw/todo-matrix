@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Todo Matrix</string>
+    <string name="title_activity_main">Todo Matrix</string>
+    <string name="package_name">site.jianghong.todomatrix</string>
+    <string name="custom_url_scheme">site.jianghong.todomatrix</string>
+</resources>

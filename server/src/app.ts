@@ -17,6 +17,29 @@ import { calculateSubtaskProgress, normalizeSubtasks, toTaskCreateInput, toTaskR
 
 export const app = express();
 
+const allowedCorsOrigins = new Set([
+  'https://todo-matrix.localhost',
+  ...(process.env.CORS_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? []),
+]);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  if (origin && allowedCorsOrigins.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Session-Token');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Vary', 'Origin');
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send();
+    return;
+  }
+
+  next();
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use(cookieParser());
 app.use(attachUser);

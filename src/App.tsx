@@ -35,6 +35,7 @@ type EditorState =
   | { mode: 'edit'; task: MatrixTask };
 
 const taskEditorFormId = 'task-editor-form';
+const networkStatusEventName = 'todo-matrix:network-status';
 
 export function App() {
   const {
@@ -73,13 +74,21 @@ export function App() {
     const updateOnlineState = () => {
       setIsOnline(navigator.onLine);
     };
+    const updateApiNetworkState = (event: Event) => {
+      const detail = (event as CustomEvent<{ online?: unknown }>).detail;
+      if (typeof detail?.online === 'boolean') {
+        setIsOnline(detail.online && navigator.onLine);
+      }
+    };
 
     window.addEventListener('online', updateOnlineState);
     window.addEventListener('offline', updateOnlineState);
+    window.addEventListener(networkStatusEventName, updateApiNetworkState);
 
     return () => {
       window.removeEventListener('online', updateOnlineState);
       window.removeEventListener('offline', updateOnlineState);
+      window.removeEventListener(networkStatusEventName, updateApiNetworkState);
     };
   }, []);
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiRequest } from '../lib/apiClient';
+import { ApiError, apiRequest } from '../lib/apiClient';
 import { calculateSubtaskProgress, normalizeSubtasks } from '../lib/subtasks';
 import { clampMetric, sortTasks } from '../lib/taskUtils';
 import type { MatrixTask, TaskFormValues, TaskMetrics } from '../types';
@@ -85,6 +85,22 @@ async function submitTaskSnapshot(snapshot: MatrixTask[]) {
   });
 }
 
+function readRequestErrorMessage(error: unknown) {
+  if (error instanceof ApiError && error.message) {
+    if (error.status === 404) {
+      return '404 Not Found，当前后端没有找到同步接口，请部署新版后端或检查桌面端 API 地址';
+    }
+
+    return error.status === 0 ? `网络请求失败：${error.message}` : `${error.status} ${error.message}`;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return null;
+}
+
 export function useCloudTasks(enabled: boolean) {
   const [tasks, setTasks] = useState<MatrixTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -160,8 +176,11 @@ export function useCloudTasks(enabled: boolean) {
         tasksRef.current = nextTasks;
         setTasks(nextTasks);
       }
-    } catch {
-      setStorageError('云端数据同步失败，稍后会自动重试。');
+    } catch (error) {
+      const errorMessage = readRequestErrorMessage(error);
+      setStorageError(
+        errorMessage ? `云端数据同步失败：${errorMessage}，稍后会自动重试。` : '云端数据同步失败，稍后会自动重试。',
+      );
       if (!pendingSnapshotRef.current) {
         pendingSnapshotRef.current = snapshot;
         setIsFlushPending(true);
@@ -232,8 +251,11 @@ export function useCloudTasks(enabled: boolean) {
           setTasks(nextTasks);
         }
         setStorageError(null);
-      } catch {
-        setStorageError('云端数据读取失败，请检查后端服务和网络。');
+      } catch (error) {
+        const errorMessage = readRequestErrorMessage(error);
+        setStorageError(
+          errorMessage ? `云端数据读取失败：${errorMessage}。` : '云端数据读取失败，请检查后端服务和网络。',
+        );
       } finally {
         isPullingRef.current = false;
         setIsPulling(false);
@@ -380,8 +402,11 @@ export function useCloudTasks(enabled: boolean) {
       tasksRef.current = cloudTasks;
       setTasks(cloudTasks);
       setStorageError(null);
-    } catch {
-      setStorageError('云端数据同步失败，请稍后重试。');
+    } catch (error) {
+      const errorMessage = readRequestErrorMessage(error);
+      setStorageError(
+        errorMessage ? `云端数据同步失败：${errorMessage}，请稍后重试。` : '云端数据同步失败，请稍后重试。',
+      );
       throw new Error('Cloud sync failed');
     } finally {
       isFlushingRef.current = false;

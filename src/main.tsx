@@ -18,7 +18,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>,
 );
 
-if ('serviceWorker' in navigator && import.meta.env.PROD && !window.todoMatrixDesktop?.isDesktop) {
+if (
+  'serviceWorker' in navigator &&
+  import.meta.env.PROD &&
+  !window.todoMatrixDesktop?.isDesktop &&
+  !window.Capacitor?.isNativePlatform?.()
+) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((error) => {
       console.error('Service worker registration failed', error);

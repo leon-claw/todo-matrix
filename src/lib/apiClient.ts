@@ -1,6 +1,60 @@
+import { CapacitorHttp } from '@capacitor/core';
+
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
 
 export const API_BASE = configuredApiBase || (import.meta.env.PROD ? '/app/todo-matrix' : '');
+
+const NETWORK_STATUS_EVENT = 'todo-matrix:network-status';
+const MOBILE_SESSION_TOKEN_KEY = 'todo-matrix:mobile-session-token';
+
+function isCapacitorNative() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const capacitor = window.Capacitor;
+  if (!capacitor) {
+    return false;
+  }
+
+  if (typeof capacitor.isNativePlatform === 'function') {
+    return capacitor.isNativePlatform();
+  }
+
+  return Boolean(capacitor.platform && capacitor.platform !== 'web');
+}
+
+function readMobileSessionToken() {
+  if (!isCapacitorNative()) {
+    return null;
+  }
+
+  return localStorage.getItem(MOBILE_SESSION_TOKEN_KEY);
+}
+
+export function saveMobileSessionToken(token: string | null | undefined) {
+  if (!isCapacitorNative() || !token) {
+    return;
+  }
+
+  localStorage.setItem(MOBILE_SESSION_TOKEN_KEY, token);
+}
+
+export function clearMobileSessionToken() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  localStorage.removeItem(MOBILE_SESSION_TOKEN_KEY);
+}
+
+function emitNetworkStatus(online: boolean) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(NETWORK_STATUS_EVENT, { detail: { online } }));
+}
 
 function readErrorMessage(payload: unknown, fallback: string) {
   if (payload && typeof payload === 'object' && 'error' in payload) {
@@ -22,7 +76,12 @@ function buildApiUrl(url: string) {
     return url;
   }
 
-  return `${API_BASE}${url.startsWith('/') ? url : `/${url}`}`;
+  const apiPath = url.startsWith('/') ? url : `/${url}`;
+  if (API_BASE.endsWith('/api') && apiPath.startsWith('/api/')) {
+    return `${API_BASE}${apiPath.slice('/api'.length)}`;
+  }
+
+  return `${API_BASE}${apiPath}`;
 }
 
 export class ApiError extends Error {
@@ -53,12 +112,19 @@ async function desktopApiRequest<T>(url: string, options: RequestOptions) {
     throw new ApiError(500, 'Desktop bridge is unavailable');
   }
 
-  const response = await bridge.apiRequest<T>({
-    body: options.body,
-    headers: normalizeHeaders(options.headers),
-    method: options.method,
-    url,
-  });
+  const response = await bridge
+    .apiRequest<T>({
+      body: options.body,
+      headers: normalizeHeaders(options.headers),
+      method: options.method,
+      url,
+    })
+    .catch((error) => {
+      emitNetworkStatus(false);
+      throw error;
+    });
+
+  emitNetworkStatus(response.status !== 0);
 
   if (!response.ok) {
     throw new ApiError(response.status, readErrorMessage(response.payload, response.statusText || 'Request failed'));
@@ -71,10 +137,48 @@ async function desktopApiRequest<T>(url: string, options: RequestOptions) {
   return response.payload as T;
 }
 
+async function mobileApiRequest<T>(url: string, options: RequestOptions) {
+  const mobileSessionToken = readMobileSessionToken();
+  const headers = {
+    ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    ...(mobileSessionToken ? { Authorization: `Bearer ${mobileSessionToken}` } : {}),
+    ...(normalizeHeaders(options.headers) ?? {}),
+  };
+
+  const response = await CapacitorHttp.request({
+    data: options.body,
+    headers,
+    method: options.method ?? 'GET',
+    responseType: 'json',
+    url: buildApiUrl(url),
+  }).catch((error) => {
+    emitNetworkStatus(false);
+    throw error;
+  });
+
+  emitNetworkStatus(true);
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new ApiError(response.status, readErrorMessage(response.data, response.status ? `HTTP ${response.status}` : 'Request failed'));
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  return response.data as T;
+}
+
 export async function apiRequest<T>(url: string, options: RequestOptions = {}) {
   if (typeof window !== 'undefined' && window.todoMatrixDesktop?.isDesktop) {
     return desktopApiRequest<T>(url, options);
   }
+
+  if (isCapacitorNative()) {
+    return mobileApiRequest<T>(url, options);
+  }
+
+  const mobileSessionToken = readMobileSessionToken();
 
   const response = await fetch(buildApiUrl(url), {
     ...options,
@@ -82,9 +186,15 @@ export async function apiRequest<T>(url: string, options: RequestOptions = {}) {
     credentials: 'include',
     headers: {
       ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(mobileSessionToken ? { Authorization: `Bearer ${mobileSessionToken}` } : {}),
       ...options.headers,
     },
+  }).catch((error) => {
+    emitNetworkStatus(false);
+    throw error;
   });
+
+  emitNetworkStatus(true);
 
   if (!response.ok) {
     let message = response.statusText || 'Request failed';

@@ -100,7 +100,7 @@ function InstallPromptContent() {
 }
 
 export function InstallPrompt() {
-  if (window.todoMatrixDesktop?.isDesktop) {
+  if (window.todoMatrixDesktop?.isDesktop || window.Capacitor?.isNativePlatform?.()) {
     return null;
   }
 

@@ -4,9 +4,11 @@ import { app, BrowserWindow, ipcMain, safeStorage, shell, session } from 'electr
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const DEFAULT_API_BASE = 'https://web.jianghong.site/app/todo-matrix';
+const DEVELOPMENT_API_BASE = 'http://127.0.0.1:3001';
+const PRODUCTION_API_BASE = 'https://web.jianghong.site/app/todo-matrix';
+const DEFAULT_API_BASE = MAIN_WINDOW_VITE_DEV_SERVER_URL ? DEVELOPMENT_API_BASE : PRODUCTION_API_BASE;
 const DESKTOP_API_BASE = (process.env.TODO_MATRIX_DESKTOP_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '');
-const ALLOWED_METHODS = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
+const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 
 interface DesktopApiRequest {
   url: string;

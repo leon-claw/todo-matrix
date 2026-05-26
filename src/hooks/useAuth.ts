@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiRequest } from '../lib/apiClient';
+import { apiRequest, clearMobileSessionToken, saveMobileSessionToken } from '../lib/apiClient';
 import type { CurrentUser } from '../types/auth';
 
 interface AuthPayload {
@@ -15,6 +15,11 @@ interface RegisterPayload extends AuthPayload {
 interface ChangePasswordPayload {
   currentPassword: string;
   nextPassword: string;
+}
+
+interface AuthResponse {
+  token?: string;
+  user: CurrentUser;
 }
 
 export function useAuth() {
@@ -40,25 +45,28 @@ export function useAuth() {
   }, [refreshUser]);
 
   const login = useCallback(async (payload: AuthPayload) => {
-    const response = await apiRequest<{ user: CurrentUser }>('/api/auth/login', {
+    const response = await apiRequest<AuthResponse>('/api/auth/login', {
       method: 'POST',
       body: payload,
     });
+    saveMobileSessionToken(response.token);
     setUser(response.user);
     setAuthError(null);
   }, []);
 
   const register = useCallback(async (payload: RegisterPayload) => {
-    const response = await apiRequest<{ user: CurrentUser }>('/api/auth/register', {
+    const response = await apiRequest<AuthResponse>('/api/auth/register', {
       method: 'POST',
       body: payload,
     });
+    saveMobileSessionToken(response.token);
     setUser(response.user);
     setAuthError(null);
   }, []);
 
   const logout = useCallback(async () => {
     await apiRequest<void>('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
+    clearMobileSessionToken();
     setUser(null);
   }, []);
 
