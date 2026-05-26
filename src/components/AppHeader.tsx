@@ -57,9 +57,21 @@ export function AppHeader({
   }
 
   return (
-    <Box component="header" sx={{ mb: 3, position: 'relative' }}>
+    <Box
+      component="header"
+      sx={{
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 2,
+        boxShadow: '0 18px 45px rgba(17, 24, 39, 0.06)',
+        mb: { xs: 2, md: 2.5 },
+        p: { xs: 1.5, sm: 2 },
+        position: 'relative',
+      }}
+    >
       {user ? (
-        <Box sx={{ position: 'absolute', right: 0, top: 0, zIndex: 3 }}>
+        <Box sx={{ position: 'absolute', right: { xs: 12, sm: 16 }, top: { xs: 12, sm: 16 }, zIndex: 3 }}>
           <Button
             aria-controls={accountMenuOpen ? 'account-menu' : undefined}
             aria-expanded={accountMenuOpen ? 'true' : undefined}
@@ -69,6 +81,7 @@ export function AppHeader({
             onClick={(event) => setAccountAnchor(event.currentTarget)}
             type="button"
             variant={isCloudMode ? 'contained' : 'outlined'}
+            sx={{ minHeight: 34, px: 1.25 }}
           >
             <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
               <span>{isCloudMode ? '云端模式' : '本地模式'}</span>
@@ -90,6 +103,7 @@ export function AppHeader({
                   borderRadius: 2,
                   minWidth: 240,
                   mt: 1,
+                  boxShadow: '0 18px 44px rgba(17, 24, 39, 0.16)',
                 },
               },
             }}
@@ -140,21 +154,21 @@ export function AppHeader({
         <Stack
           direction="row"
           spacing={1.5}
-          sx={{ alignItems: 'center', minWidth: 0, pr: user ? { xs: 16, sm: 0 } : 0 }}
+          sx={{ alignItems: 'center', minWidth: 0, pr: user ? { xs: 15, sm: 0 } : 0 }}
         >
           <Box
             aria-hidden="true"
             sx={{
               bgcolor: 'grey.900',
               borderRadius: 2,
-              boxShadow: '0 16px 40px rgba(15, 23, 42, 0.16)',
+              boxShadow: '0 12px 28px rgba(17, 24, 39, 0.14)',
               display: 'grid',
               flex: '0 0 auto',
               gap: 0.5,
-              gridTemplateColumns: 'repeat(2, 14px)',
-              height: 44,
+              gridTemplateColumns: 'repeat(2, 13px)',
+              height: 42,
               p: '6px',
-              width: 44,
+              width: 42,
               '& span': {
                 borderRadius: '4px',
               },
@@ -186,7 +200,7 @@ export function AppHeader({
             flexWrap: 'wrap',
             gap: 1,
             justifyContent: { xs: 'flex-start', sm: 'flex-end' },
-            pt: user ? { xs: 1, sm: 0 } : 0,
+            pt: user ? { xs: 1.25, sm: 0 } : 0,
             width: { xs: '100%', sm: 'auto' },
           }}
         >

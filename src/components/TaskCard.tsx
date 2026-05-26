@@ -50,11 +50,12 @@ export function TaskCard({
       component="article"
       variant="outlined"
       sx={{
-        bgcolor: task.completed ? 'grey.50' : 'background.paper',
+        bgcolor: task.completed ? 'rgba(248, 250, 252, 0.92)' : 'background.paper',
+        borderColor: task.completed ? 'divider' : 'rgba(215, 222, 232, 0.96)',
         opacity: task.completed ? 0.78 : 1,
         overflow: 'hidden',
         position: 'relative',
-        transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+        transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background-color 160ms ease',
         '&::before': {
           bgcolor: task.color,
           bottom: 0,
@@ -62,16 +63,16 @@ export function TaskCard({
           left: 0,
           position: 'absolute',
           top: 0,
-          width: 4,
+          width: 3,
         },
         '&:hover': {
-          borderColor: task.color,
-          boxShadow: '0 12px 30px rgba(15, 23, 42, 0.08)',
+          borderColor: task.completed ? 'divider' : task.color,
+          boxShadow: '0 14px 34px rgba(17, 24, 39, 0.08)',
           transform: 'translateY(-1px)',
         },
       }}
     >
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', p: 1.25, pl: 1.75 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', p: { xs: 1.1, sm: 1.25 }, pl: 1.75 }}>
         <Tooltip title={task.completed ? '标记为未完成' : '标记为完成'}>
           <IconButton
             aria-label={task.completed ? '标记为未完成' : '标记为完成'}
@@ -93,7 +94,7 @@ export function TaskCard({
             sx={{
               borderRadius: 1,
               display: 'block',
-              py: 0.5,
+              py: 0.35,
               textAlign: 'left',
               width: '100%',
             }}
@@ -103,6 +104,7 @@ export function TaskCard({
                 component="h3"
                 sx={{
                   fontWeight: 700,
+                  lineHeight: 1.35,
                   minWidth: 0,
                   overflowWrap: 'anywhere',
                   textDecoration: task.completed ? 'line-through' : 'none',
@@ -170,7 +172,17 @@ export function TaskCard({
       </Stack>
 
       <Collapse in={isExpanded} timeout={180} unmountOnExit sx={{ width: '100%' }}>
-        <Box sx={{ maxWidth: '100%', px: { xs: 1.75, sm: 2 }, pb: 1.5, width: '100%' }}>
+        <Box
+          sx={{
+            bgcolor: 'rgba(248, 250, 252, 0.72)',
+            borderTop: 1,
+            borderColor: 'divider',
+            maxWidth: '100%',
+            px: { xs: 1.75, sm: 2 },
+            py: 1.5,
+            width: '100%',
+          }}
+        >
           {task.subtasks.length ? <SubtasksPreview subtasks={task.subtasks} /> : null}
           {task.notes ? (
             <Typography

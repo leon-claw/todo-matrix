@@ -119,13 +119,13 @@ function getLabelStyle(title: string, active: boolean) {
     overflow: 'truncate',
     ellipsis: '...',
     backgroundColor: '#ffffff',
-    borderColor: active ? 'rgba(37, 99, 235, 0.5)' : 'rgba(37, 99, 235, 0.2)',
+    borderColor: active ? 'rgba(29, 78, 216, 0.5)' : 'rgba(29, 78, 216, 0.18)',
     borderWidth: 1,
     borderRadius: 10,
     padding: [7, 9],
     opacity: active ? 1 : 0.46,
     shadowBlur: active ? 18 : 8,
-    shadowColor: active ? 'rgba(37, 99, 235, 0.24)' : 'rgba(37, 99, 235, 0.08)',
+    shadowColor: active ? 'rgba(29, 78, 216, 0.24)' : 'rgba(17, 24, 39, 0.08)',
   };
 }
 
@@ -264,7 +264,7 @@ function buildGraphicElements(
           stroke: '#ffffff',
           lineWidth: 3,
           shadowBlur: 12,
-          shadowColor: 'rgba(37, 99, 235, 0.25)',
+          shadowColor: 'rgba(17, 24, 39, 0.18)',
         },
         onmouseover(this: DragElement) {
           labelController.position = this.position;
@@ -350,7 +350,7 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
       },
       splitLine: {
         lineStyle: {
-          color: '#e5edf7',
+          color: '#e3e9f1',
         },
       },
     },
@@ -369,7 +369,7 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
       },
       splitLine: {
         lineStyle: {
-          color: '#e5edf7',
+          color: '#e3e9f1',
         },
       },
     },
@@ -393,9 +393,9 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
           symbol: 'none',
           label: { show: false },
           lineStyle: {
-            color: '#111827',
-            width: 1.4,
-            opacity: 0.72,
+            color: '#253044',
+            width: 1.2,
+            opacity: 0.68,
             type: 'solid',
           },
           data: [
@@ -530,10 +530,12 @@ export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
       component="section"
       variant="outlined"
       sx={{
+        boxShadow: '0 18px 45px rgba(17, 24, 39, 0.06)',
         display: 'grid',
-        gap: 1.75,
+        gap: 1.5,
         minHeight: { xs: 0, lg: 'calc(100vh - 132px)' },
-        p: { xs: 1.5, md: 2.25 },
+        overflow: 'hidden',
+        p: { xs: 1.25, md: 1.5 },
         position: { xs: 'static', lg: 'sticky' },
         top: 18,
       }}
@@ -545,7 +547,11 @@ export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
             纵轴是紧急程度，横轴是重要程度。
           </Typography>
         </Box>
-        <Chip label={`${visibleTasks.length} 项显示`} size="small" />
+        <Chip
+          label={`${visibleTasks.length} 项显示`}
+          size="small"
+          sx={{ bgcolor: 'rgba(29, 78, 216, 0.08)', color: 'primary.dark', fontWeight: 700 }}
+        />
       </Stack>
 
       <Box className="axis-frame">

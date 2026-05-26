@@ -249,11 +249,12 @@ export function App() {
         sx={{
           alignItems: 'start',
           display: 'grid',
-          gap: 2.5,
+          gap: { xs: 2, lg: 2.5 },
           gridTemplateColumns: {
             xs: '1fr',
-            lg: 'minmax(460px, 0.92fr) minmax(420px, 1.08fr)',
+            lg: 'minmax(480px, 0.98fr) minmax(420px, 1.02fr)',
           },
+          minHeight: { lg: 'calc(100vh - 132px)' },
         }}
       >
         <PriorityAxis
@@ -263,14 +264,13 @@ export function App() {
           tasks={activeStore.tasks}
         />
 
-        <Paper
+        <Box
           component="section"
           aria-label="TODO 列表"
-          variant="outlined"
           sx={{
             display: 'grid',
-            gap: 1.5,
-            p: { xs: 1.5, md: 2 },
+            gap: 1.25,
+            minWidth: 0,
           }}
         >
           {activeStore.storageError ? <Alert severity="error">{activeStore.storageError}</Alert> : null}
@@ -293,6 +293,7 @@ export function App() {
                 size="small"
                 startIcon={<DeleteSweepRoundedIcon />}
                 variant="outlined"
+                sx={{ bgcolor: 'background.paper' }}
               >
                 清除所有已完成
               </Button>
@@ -304,6 +305,7 @@ export function App() {
               variant="outlined"
               sx={{
                 alignItems: 'center',
+                borderStyle: 'dashed',
                 color: 'text.secondary',
                 display: 'flex',
                 gap: 1.5,
@@ -325,13 +327,13 @@ export function App() {
               tasks={visibleTasks}
             />
           )}
-        </Paper>
+        </Box>
       </Box>
     );
   }
 
   return (
-    <Container maxWidth={false} sx={{ maxWidth: 1480, py: { xs: 2, md: 3 } }}>
+    <Container maxWidth={false} sx={{ maxWidth: 1500, px: { xs: 1.5, sm: 2.5, md: 3 }, py: { xs: 1.5, md: 2.5 } }}>
       <AppHeader
         isCloudMode={isCloudMode}
         isSyncing={isCloudMode && cloudStore.isSyncing}
@@ -346,7 +348,7 @@ export function App() {
       />
 
       {!isOnline ? (
-        <Alert severity="warning" variant="filled" sx={{ mb: 2 }}>
+        <Alert severity="warning" variant="filled" sx={{ borderRadius: 2, mb: 2 }}>
           当前处于离线状态，云端同步会在网络恢复后继续尝试。
         </Alert>
       ) : null}

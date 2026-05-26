@@ -28,6 +28,7 @@ export function TodoList({
         variant="outlined"
         sx={{
           alignItems: 'center',
+          borderStyle: 'dashed',
           color: 'text.secondary',
           display: 'grid',
           gap: 1,
