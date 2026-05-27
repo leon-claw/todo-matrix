@@ -55,6 +55,8 @@ export function SubtasksEditor({ onChange, subtasks }: SubtasksEditorProps) {
               />
               <TextField
                 fullWidth
+                multiline
+                minRows={1}
                 onBlur={() => commit(subtasks)}
                 onChange={(event) => updateSubtask(subtask.id, { title: event.target.value })}
                 placeholder="子待办"

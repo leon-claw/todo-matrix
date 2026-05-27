@@ -3,7 +3,7 @@ import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import TouchAppRoundedIcon from '@mui/icons-material/TouchAppRounded';
 import * as echarts from 'echarts/core';
 import type { ECharts, EChartsCoreOption } from 'echarts/core';
-import { GraphicComponent, GridComponent, MarkLineComponent } from 'echarts/components';
+import { GraphicComponent, GridComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import { ScatterChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
 import type { MatrixTask, TaskMetrics } from '../types';
@@ -12,11 +12,14 @@ echarts.use([
   GridComponent,
   GraphicComponent,
   MarkLineComponent,
+  TooltipComponent,
   ScatterChart,
   CanvasRenderer,
 ]);
 
 interface PriorityAxisProps {
+  onInteractionEnd?: () => void;
+  onInteractionStart?: () => void;
   tasks: MatrixTask[];
   onMetricsChange: (taskId: string, metrics: Partial<TaskMetrics>) => void;
 }
@@ -40,9 +43,10 @@ interface LabelFrameController {
   position: number[];
 }
 
-const LABEL_WIDTH = 160;
+const LABEL_MAX_WIDTH = 220;
+const LABEL_MIN_WIDTH = 34;
 const LABEL_HEIGHT = 32;
-const LABEL_GAP = 18;
+const LABEL_GAP = 14;
 const LABEL_PADDING_X = 18;
 const LABEL_PADDING_Y = 14;
 
@@ -63,6 +67,28 @@ function clamp(value: number, min: number, max: number) {
 
 function clampMetric(value: number) {
   return clamp(Math.round(value), 0, 100);
+}
+
+function getLabelTextWidth(title: string) {
+  const textWidth = [...title].reduce((width, character) => {
+    if (character === ' ') {
+      return width + 4;
+    }
+
+    return width + (character.charCodeAt(0) > 255 ? 13 : 7);
+  }, 0);
+
+  return clamp(Math.ceil(textWidth), LABEL_MIN_WIDTH, LABEL_MAX_WIDTH);
+}
+
+function getLabelMetrics(title: string) {
+  const width = getLabelTextWidth(title);
+
+  return {
+    boxHeight: LABEL_HEIGHT + LABEL_PADDING_Y,
+    boxWidth: width + LABEL_PADDING_X,
+    width,
+  };
 }
 
 function clampPixelPosition(chart: ECharts, position: number[]) {
@@ -90,32 +116,42 @@ function getDropState(chart: ECharts, position: number[]) {
   return { metrics, snappedPosition };
 }
 
-function getLabelPosition(chart: ECharts, point: number[]) {
+function getLabelPosition(chart: ECharts, point: number[], title: string) {
   const chartWidth = chart.getWidth();
   const chartHeight = chart.getHeight();
-  const boxWidth = LABEL_WIDTH + LABEL_PADDING_X;
-  const boxHeight = LABEL_HEIGHT + LABEL_PADDING_Y;
+  const { boxWidth, boxHeight } = getLabelMetrics(title);
   const edge = 8;
-  const rightX = point[0] + LABEL_GAP;
-  const leftX = point[0] - boxWidth - LABEL_GAP;
-  const preferredX = rightX + boxWidth > chartWidth - edge ? leftX : rightX;
-  const centerY = point[1] - boxHeight / 2;
-  const belowY = point[1] + LABEL_GAP;
-  const aboveY = point[1] - boxHeight - 6;
-  const preferredY = centerY < edge ? belowY : centerY + boxHeight > chartHeight - edge ? aboveY : centerY;
+  const centeredX = point[0] - boxWidth / 2;
+  const centeredY = point[1] - boxHeight / 2;
+  const candidates = [
+    { x: centeredX, y: point[1] - boxHeight - LABEL_GAP },
+    { x: centeredX, y: point[1] + LABEL_GAP },
+    { x: point[0] + LABEL_GAP, y: centeredY },
+    { x: point[0] - boxWidth - LABEL_GAP, y: centeredY },
+  ];
+  const visibleCandidate = candidates.find(
+    (candidate) =>
+      candidate.x >= edge &&
+      candidate.y >= edge &&
+      candidate.x + boxWidth <= chartWidth - edge &&
+      candidate.y + boxHeight <= chartHeight - edge,
+  );
+  const preferred = visibleCandidate ?? candidates[0];
 
   return {
-    x: clamp(preferredX, edge, Math.max(edge, chartWidth - boxWidth - edge)),
-    y: clamp(preferredY, edge, Math.max(edge, chartHeight - boxHeight - edge)),
+    x: clamp(preferred.x, edge, Math.max(edge, chartWidth - boxWidth - edge)),
+    y: clamp(preferred.y, edge, Math.max(edge, chartHeight - boxHeight - edge)),
   };
 }
 
 function getLabelStyle(title: string, active: boolean) {
+  const { width } = getLabelMetrics(title);
+
   return {
     text: title,
     fill: '#0f172a',
     font: '700 12px Roboto, system-ui, sans-serif',
-    width: LABEL_WIDTH,
+    width,
     overflow: 'truncate',
     ellipsis: '...',
     backgroundColor: '#ffffff',
@@ -188,12 +224,14 @@ function setPageDragLock(active: boolean) {
 }
 
 function setLabelState(chart: ECharts, task: MatrixTask, position: number[], active: boolean) {
+  const labelText = getAxisLabelText(task);
+
   chart.setOption({
     graphic: [
       {
         id: `task-label-${task.id}`,
-        ...getLabelPosition(chart, position),
-        style: getLabelStyle(getAxisLabelText(task), active),
+        ...getLabelPosition(chart, position, labelText),
+        style: getLabelStyle(labelText, active),
       },
     ],
   });
@@ -232,12 +270,15 @@ function buildGraphicElements(
   chart: ECharts,
   tasks: MatrixTask[],
   onMetricsChange: (taskId: string, metrics: Partial<TaskMetrics>) => void,
+  onInteractionStart?: () => void,
+  onInteractionEnd?: () => void,
 ) {
   return tasks.flatMap((task) => {
     const position = chart.convertToPixel({ gridIndex: 0 }, [
       task.importance,
       task.urgency,
     ]) as number[];
+    const labelText = getAxisLabelText(task);
     const labelController: LabelFrameController = {
       active: false,
       isDragging: false,
@@ -283,6 +324,7 @@ function buildGraphicElements(
           labelController.isDragging = true;
           labelController.position = this.position;
           labelController.active = true;
+          onInteractionStart?.();
           setPageDragLock(true);
           flushLabelState(chart, task, labelController);
         },
@@ -291,6 +333,7 @@ function buildGraphicElements(
 
           if (!labelController.isDragging) {
             labelController.isDragging = true;
+            onInteractionStart?.();
             setPageDragLock(true);
           }
 
@@ -310,6 +353,7 @@ function buildGraphicElements(
           flushLabelState(chart, task, labelController);
           this.dirty?.();
           onMetricsChange(task.id, metrics);
+          onInteractionEnd?.();
         },
       },
       {
@@ -317,8 +361,8 @@ function buildGraphicElements(
         type: 'text',
         silent: true,
         z: 101,
-        ...getLabelPosition(chart, position),
-        style: getLabelStyle(getAxisLabelText(task), false),
+        ...getLabelPosition(chart, position, labelText),
+        style: getLabelStyle(labelText, false),
       },
     ];
   });
@@ -409,10 +453,13 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
   };
 }
 
-export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
+export function PriorityAxis({ tasks, onInteractionEnd, onInteractionStart, onMetricsChange }: PriorityAxisProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ECharts | null>(null);
   const onMetricsChangeRef = useRef(onMetricsChange);
+  const onInteractionEndRef = useRef(onInteractionEnd);
+  const onInteractionStartRef = useRef(onInteractionStart);
+  const interactionDepthRef = useRef(0);
   const visibleTasks = useMemo(
     () => tasks.filter((task) => task.showOnAxis && !task.completed),
     [tasks],
@@ -424,8 +471,37 @@ export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
   }, [onMetricsChange]);
 
   useEffect(() => {
+    onInteractionEndRef.current = onInteractionEnd;
+  }, [onInteractionEnd]);
+
+  useEffect(() => {
+    onInteractionStartRef.current = onInteractionStart;
+  }, [onInteractionStart]);
+
+  useEffect(() => {
     visibleTasksRef.current = visibleTasks;
   }, [visibleTasks]);
+
+  const beginInteraction = useCallback(() => {
+    interactionDepthRef.current += 1;
+    onInteractionStartRef.current?.();
+  }, []);
+
+  const endInteraction = useCallback(() => {
+    if (interactionDepthRef.current === 0) {
+      return;
+    }
+
+    interactionDepthRef.current -= 1;
+    onInteractionEndRef.current?.();
+  }, []);
+
+  const releaseAllInteractions = useCallback(() => {
+    while (interactionDepthRef.current > 0) {
+      interactionDepthRef.current -= 1;
+      onInteractionEndRef.current?.();
+    }
+  }, []);
 
   const renderGraphicOverlay = useCallback(() => {
     const chart = chartRef.current;
@@ -434,11 +510,15 @@ export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
     }
 
     chart.setOption({
-      graphic: buildGraphicElements(chart, visibleTasksRef.current, (taskId, metrics) =>
-        onMetricsChangeRef.current(taskId, metrics),
+      graphic: buildGraphicElements(
+        chart,
+        visibleTasksRef.current,
+        (taskId, metrics) => onMetricsChangeRef.current(taskId, metrics),
+        beginInteraction,
+        endInteraction,
       ),
     });
-  }, []);
+  }, [beginInteraction, endInteraction]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -457,11 +537,12 @@ export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
 
     return () => {
       resizeObserver.disconnect();
+      releaseAllInteractions();
       setPageDragLock(false);
       chart.dispose();
       chartRef.current = null;
     };
-  }, [renderGraphicOverlay]);
+  }, [releaseAllInteractions, renderGraphicOverlay]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -474,15 +555,23 @@ export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
     const passiveOptions: AddEventListenerOptions = { capture: true, passive: true };
 
     const releaseAxisTouch = () => {
+      const wasTouchingAxis = isTouchingAxis;
       isTouchingAxis = false;
       container.classList.remove('is-touching');
       setPageDragLock(false);
+      if (wasTouchingAxis) {
+        endInteraction();
+      }
     };
 
     const handleAxisTouchStart = (event: TouchEvent) => {
       if (event.touches.length !== 1) {
         releaseAxisTouch();
         return;
+      }
+
+      if (!isTouchingAxis) {
+        beginInteraction();
       }
 
       isTouchingAxis = true;
@@ -512,7 +601,7 @@ export function PriorityAxis({ tasks, onMetricsChange }: PriorityAxisProps) {
       window.removeEventListener('blur', releaseAxisTouch, passiveOptions);
       releaseAxisTouch();
     };
-  }, []);
+  }, [beginInteraction, endInteraction]);
 
   useEffect(() => {
     const chart = chartRef.current;

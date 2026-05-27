@@ -116,6 +116,9 @@ export function useCloudTasks(enabled: boolean) {
   const isFlushingRef = useRef(false);
   const isPullingRef = useRef(false);
   const lastPullAtRef = useRef(0);
+  const syncPauseDepthRef = useRef(0);
+  const isSyncPausedRef = useRef(false);
+  const syncPauseVersionRef = useRef(0);
 
   useEffect(() => {
     tasksRef.current = tasks;
@@ -124,6 +127,14 @@ export function useCloudTasks(enabled: boolean) {
   useEffect(() => {
     isFlushingRef.current = isFlushing;
   }, [isFlushing]);
+
+  useEffect(() => {
+    if (!enabled) {
+      syncPauseDepthRef.current = 0;
+      isSyncPausedRef.current = false;
+      syncPauseVersionRef.current += 1;
+    }
+  }, [enabled]);
 
   const clearSyncTimer = useCallback(() => {
     if (syncTimerRef.current) {
@@ -142,6 +153,10 @@ export function useCloudTasks(enabled: boolean) {
   const scheduleFlush = useCallback(
     (delay = CLOUD_SYNC_DEBOUNCE_MS) => {
       clearSyncTimer();
+      if (isSyncPausedRef.current) {
+        return;
+      }
+
       syncTimerRef.current = window.setTimeout(() => {
         syncTimerRef.current = null;
         void flushPendingSyncRef.current();
@@ -157,12 +172,18 @@ export function useCloudTasks(enabled: boolean) {
       return;
     }
 
+    if (isSyncPausedRef.current) {
+      setIsFlushPending(Boolean(pendingSnapshotRef.current));
+      return;
+    }
+
     const snapshot = pendingSnapshotRef.current;
     if (!snapshot) {
       setIsFlushPending(false);
       return;
     }
 
+    const requestPauseVersion = syncPauseVersionRef.current;
     pendingSnapshotRef.current = null;
     setIsFlushPending(false);
     isFlushingRef.current = true;
@@ -170,8 +191,10 @@ export function useCloudTasks(enabled: boolean) {
     try {
       const response = await submitTaskSnapshot(snapshot);
       lastPullAtRef.current = Date.now();
-      setStorageError(null);
-      if (!pendingSnapshotRef.current) {
+      if (!isSyncPausedRef.current && requestPauseVersion === syncPauseVersionRef.current) {
+        setStorageError(null);
+      }
+      if (!pendingSnapshotRef.current && !isSyncPausedRef.current && requestPauseVersion === syncPauseVersionRef.current) {
         const nextTasks = sortTasks(response.tasks.map(normalizeCloudTask));
         tasksRef.current = nextTasks;
         setTasks(nextTasks);
@@ -233,10 +256,11 @@ export function useCloudTasks(enabled: boolean) {
         return;
       }
 
-      if (pendingSnapshotRef.current || isFlushingRef.current || isPullingRef.current) {
+      if (pendingSnapshotRef.current || isFlushingRef.current || isPullingRef.current || isSyncPausedRef.current) {
         return;
       }
 
+      const requestPauseVersion = syncPauseVersionRef.current;
       isPullingRef.current = true;
       setIsPulling(true);
       if (!options.silent) {
@@ -245,17 +269,21 @@ export function useCloudTasks(enabled: boolean) {
       lastPullAtRef.current = Date.now();
       try {
         const response = await apiRequest<{ tasks: MatrixTask[] }>('/api/tasks');
-        if (!pendingSnapshotRef.current) {
+        if (!pendingSnapshotRef.current && !isSyncPausedRef.current && requestPauseVersion === syncPauseVersionRef.current) {
           const nextTasks = sortTasks(response.tasks.map(normalizeCloudTask));
           tasksRef.current = nextTasks;
           setTasks(nextTasks);
         }
-        setStorageError(null);
+        if (!isSyncPausedRef.current && requestPauseVersion === syncPauseVersionRef.current) {
+          setStorageError(null);
+        }
       } catch (error) {
-        const errorMessage = readRequestErrorMessage(error);
-        setStorageError(
-          errorMessage ? `云端数据读取失败：${errorMessage}。` : '云端数据读取失败，请检查后端服务和网络。',
-        );
+        if (!isSyncPausedRef.current && requestPauseVersion === syncPauseVersionRef.current) {
+          const errorMessage = readRequestErrorMessage(error);
+          setStorageError(
+            errorMessage ? `云端数据读取失败：${errorMessage}。` : '云端数据读取失败，请检查后端服务和网络。',
+          );
+        }
       } finally {
         isPullingRef.current = false;
         setIsPulling(false);
@@ -269,7 +297,13 @@ export function useCloudTasks(enabled: boolean) {
 
   const scheduleReload = useCallback(
     (options: { silent?: boolean } = { silent: true }) => {
-      if (!enabled || pendingSnapshotRef.current || isFlushingRef.current || isPullingRef.current) {
+      if (
+        !enabled ||
+        pendingSnapshotRef.current ||
+        isFlushingRef.current ||
+        isPullingRef.current ||
+        isSyncPausedRef.current
+      ) {
         return;
       }
 
@@ -283,6 +317,41 @@ export function useCloudTasks(enabled: boolean) {
     },
     [clearPullTimer, enabled, reloadTasks],
   );
+
+  const pauseSync = useCallback(() => {
+    syncPauseDepthRef.current += 1;
+    if (syncPauseDepthRef.current === 1) {
+      isSyncPausedRef.current = true;
+      syncPauseVersionRef.current += 1;
+    }
+
+    clearSyncTimer();
+    clearPullTimer();
+  }, [clearPullTimer, clearSyncTimer]);
+
+  const resumeSync = useCallback(() => {
+    if (syncPauseDepthRef.current === 0) {
+      return;
+    }
+
+    syncPauseDepthRef.current -= 1;
+    if (syncPauseDepthRef.current > 0) {
+      return;
+    }
+
+    isSyncPausedRef.current = false;
+    if (!enabled) {
+      return;
+    }
+
+    if (pendingSnapshotRef.current) {
+      setIsFlushPending(true);
+      scheduleFlush();
+      return;
+    }
+
+    scheduleReload({ silent: true });
+  }, [enabled, scheduleFlush, scheduleReload]);
 
   useEffect(() => {
     void reloadTasks();
@@ -432,8 +501,10 @@ export function useCloudTasks(enabled: boolean) {
     deleteTask,
     isLoading,
     isSyncing: isLoading || isPulling || isFlushing,
+    pauseSync,
     reloadTasks,
     replaceCloudTasks,
+    resumeSync,
     stats,
     storageError,
     tasks,

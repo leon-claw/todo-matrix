@@ -16,6 +16,8 @@ import {
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import DeleteSweepRoundedIcon from '@mui/icons-material/DeleteSweepRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { AppHeader } from './components/AppHeader';
 import { AuthPanel } from './components/AuthPanel';
 import { ChangePasswordPanel } from './components/ChangePasswordPanel';
@@ -64,6 +66,7 @@ export function App() {
   const [isPasswordChanging, setIsPasswordChanging] = useState(false);
   const [migrationBusy, setMigrationBusy] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  const [isMobileAxisHidden, setIsMobileAxisHidden] = useState(false);
 
   useEffect(() => {
     setLocalDataResolved(false);
@@ -257,12 +260,29 @@ export function App() {
           minHeight: { lg: 'calc(100vh - 132px)' },
         }}
       >
-        <PriorityAxis
-          onMetricsChange={(taskId: string, metrics: Partial<TaskMetrics>) =>
-            activeStore.updateTaskMetrics(taskId, metrics)
-          }
-          tasks={activeStore.tasks}
-        />
+        <Box sx={{ display: 'grid', gap: 1.25, minWidth: 0 }}>
+          <Box sx={{ display: { xs: 'flex', lg: 'none' }, justifyContent: 'flex-end' }}>
+            <Button
+              onClick={() => setIsMobileAxisHidden((current) => !current)}
+              size="small"
+              startIcon={isMobileAxisHidden ? <VisibilityRoundedIcon /> : <VisibilityOffRoundedIcon />}
+              variant="outlined"
+              sx={{ bgcolor: 'background.paper' }}
+            >
+              {isMobileAxisHidden ? '显示坐标轴' : '隐藏坐标轴'}
+            </Button>
+          </Box>
+          <Box sx={{ display: isMobileAxisHidden ? { xs: 'none', lg: 'block' } : 'block', minWidth: 0 }}>
+            <PriorityAxis
+              onInteractionEnd={isCloudMode ? cloudStore.resumeSync : undefined}
+              onInteractionStart={isCloudMode ? cloudStore.pauseSync : undefined}
+              onMetricsChange={(taskId: string, metrics: Partial<TaskMetrics>) =>
+                activeStore.updateTaskMetrics(taskId, metrics)
+              }
+              tasks={activeStore.tasks}
+            />
+          </Box>
+        </Box>
 
         <Box
           component="section"
