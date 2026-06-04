@@ -1,6 +1,8 @@
 import { CapacitorHttp } from '@capacitor/core';
 
-const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
+const configuredGlobalApiBase =
+  typeof __TODO_MATRIX_API_BASE_URL__ === 'undefined' ? '' : __TODO_MATRIX_API_BASE_URL__;
+const configuredApiBase = (configuredGlobalApiBase || import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 export const API_BASE = configuredApiBase || (import.meta.env.PROD ? '/app/todo-matrix' : '');
 
@@ -24,8 +26,24 @@ function isCapacitorNative() {
   return Boolean(capacitor.platform && capacitor.platform !== 'web');
 }
 
+function isCrossOriginApiBase() {
+  if (typeof window === 'undefined' || !API_BASE || !/^https?:\/\//i.test(API_BASE)) {
+    return false;
+  }
+
+  try {
+    return new URL(API_BASE).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+function shouldUseClientSessionToken() {
+  return isCapacitorNative() || isCrossOriginApiBase();
+}
+
 function readMobileSessionToken() {
-  if (!isCapacitorNative()) {
+  if (!shouldUseClientSessionToken()) {
     return null;
   }
 
@@ -33,7 +51,7 @@ function readMobileSessionToken() {
 }
 
 export function saveMobileSessionToken(token: string | null | undefined) {
-  if (!isCapacitorNative() || !token) {
+  if (!shouldUseClientSessionToken() || !token) {
     return;
   }
 

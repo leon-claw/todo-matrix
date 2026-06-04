@@ -107,6 +107,7 @@ export function useCloudTasks(enabled: boolean) {
   const [isFlushPending, setIsFlushPending] = useState(false);
   const [isFlushing, setIsFlushing] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
   const tasksRef = useRef<MatrixTask[]>([]);
   const pendingSnapshotRef = useRef<MatrixTask[] | null>(null);
@@ -249,6 +250,7 @@ export function useCloudTasks(enabled: boolean) {
         clearPullTimer();
         pendingSnapshotRef.current = null;
         setIsFlushPending(false);
+        setHasLoadedOnce(false);
         setIsLoading(false);
         setIsPulling(false);
         setTasks([]);
@@ -288,6 +290,7 @@ export function useCloudTasks(enabled: boolean) {
         isPullingRef.current = false;
         setIsPulling(false);
         if (!options.silent) {
+          setHasLoadedOnce(true);
           setIsLoading(false);
         }
       }
@@ -499,6 +502,7 @@ export function useCloudTasks(enabled: boolean) {
     addTask,
     clearCompletedTasks,
     deleteTask,
+    isInitialLoading: enabled && !hasLoadedOnce && isLoading,
     isLoading,
     isSyncing: isLoading || isPulling || isFlushing,
     pauseSync,

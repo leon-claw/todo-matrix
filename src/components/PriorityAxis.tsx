@@ -41,8 +41,11 @@ interface LabelFrameController {
   isDragging: boolean;
   pendingFrame: number | null;
   position: number[];
+  raised: boolean;
 }
 
+const LABEL_Z_INDEX = 101;
+const LABEL_RAISED_Z_INDEX = 1000;
 const LABEL_MAX_WIDTH = 220;
 const LABEL_MIN_WIDTH = 34;
 const LABEL_HEIGHT = 32;
@@ -223,13 +226,14 @@ function setPageDragLock(active: boolean) {
   window.scrollTo(0, previousState.scrollY);
 }
 
-function setLabelState(chart: ECharts, task: MatrixTask, position: number[], active: boolean) {
+function setLabelState(chart: ECharts, task: MatrixTask, position: number[], active: boolean, raised: boolean) {
   const labelText = getAxisLabelText(task);
 
   chart.setOption({
     graphic: [
       {
         id: `task-label-${task.id}`,
+        z: raised ? LABEL_RAISED_Z_INDEX : LABEL_Z_INDEX,
         ...getLabelPosition(chart, position, labelText),
         style: getLabelStyle(labelText, active),
       },
@@ -243,9 +247,11 @@ function scheduleLabelState(
   controller: LabelFrameController,
   position: number[],
   active: boolean,
+  raised: boolean,
 ) {
   controller.position = position;
   controller.active = active;
+  controller.raised = raised;
 
   if (controller.pendingFrame !== null) {
     return;
@@ -253,7 +259,7 @@ function scheduleLabelState(
 
   controller.pendingFrame = requestAnimationFrame(() => {
     controller.pendingFrame = null;
-    setLabelState(chart, task, controller.position, controller.active);
+    setLabelState(chart, task, controller.position, controller.active, controller.raised);
   });
 }
 
@@ -263,7 +269,7 @@ function flushLabelState(chart: ECharts, task: MatrixTask, controller: LabelFram
     controller.pendingFrame = null;
   }
 
-  setLabelState(chart, task, controller.position, controller.active);
+  setLabelState(chart, task, controller.position, controller.active, controller.raised);
 }
 
 function buildGraphicElements(
@@ -284,6 +290,7 @@ function buildGraphicElements(
       isDragging: false,
       pendingFrame: null,
       position,
+      raised: false,
     };
 
     return [
@@ -310,12 +317,14 @@ function buildGraphicElements(
         onmouseover(this: DragElement) {
           labelController.position = this.position;
           labelController.active = true;
+          labelController.raised = true;
           flushLabelState(chart, task, labelController);
         },
         onmouseout(this: DragElement) {
           if (!labelController.isDragging) {
             labelController.position = this.position;
             labelController.active = false;
+            labelController.raised = false;
             flushLabelState(chart, task, labelController);
           }
         },
@@ -324,6 +333,7 @@ function buildGraphicElements(
           labelController.isDragging = true;
           labelController.position = this.position;
           labelController.active = true;
+          labelController.raised = true;
           onInteractionStart?.();
           setPageDragLock(true);
           flushLabelState(chart, task, labelController);
@@ -338,7 +348,7 @@ function buildGraphicElements(
           }
 
           this.position = clampPixelPosition(chart, this.position);
-          scheduleLabelState(chart, task, labelController, this.position, true);
+          scheduleLabelState(chart, task, labelController, this.position, true, true);
           this.dirty?.();
         },
         ondragend(this: DragElement, event: ZrPointerEvent) {
@@ -349,6 +359,7 @@ function buildGraphicElements(
           labelController.isDragging = false;
           labelController.position = this.position;
           labelController.active = true;
+          labelController.raised = false;
           setPageDragLock(false);
           flushLabelState(chart, task, labelController);
           this.dirty?.();
@@ -360,7 +371,7 @@ function buildGraphicElements(
         id: `task-label-${task.id}`,
         type: 'text',
         silent: true,
-        z: 101,
+        z: LABEL_Z_INDEX,
         ...getLabelPosition(chart, position, labelText),
         style: getLabelStyle(labelText, false),
       },

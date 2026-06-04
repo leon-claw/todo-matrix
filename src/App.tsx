@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Backdrop,
   Box,
   Button,
   CircularProgress,
@@ -56,6 +57,7 @@ export function App() {
   const isCloudMode = Boolean(user && !migrationRequired);
   const cloudStore = useCloudTasks(Boolean(user));
   const activeStore = isCloudMode ? cloudStore : localStore;
+  const isCloudInitialLoading = isCloudMode && cloudStore.isInitialLoading;
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MatrixTask | null>(null);
   const [clearCompletedDialogOpen, setClearCompletedDialogOpen] = useState(false);
@@ -353,7 +355,11 @@ export function App() {
   }
 
   return (
-    <Container maxWidth={false} sx={{ maxWidth: 1500, px: { xs: 1.5, sm: 2.5, md: 3 }, py: { xs: 1.5, md: 2.5 } }}>
+    <Container
+      aria-busy={isCloudInitialLoading}
+      maxWidth={false}
+      sx={{ maxWidth: 1500, px: { xs: 1.5, sm: 2.5, md: 3 }, py: { xs: 1.5, md: 2.5 } }}
+    >
       <AppHeader
         isCloudMode={isCloudMode}
         isSyncing={isCloudMode && cloudStore.isSyncing}
@@ -528,6 +534,43 @@ export function App() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Backdrop
+        open={isCloudInitialLoading}
+        sx={{
+          backdropFilter: 'blur(10px)',
+          bgcolor: 'rgba(241, 245, 249, 0.72)',
+          color: 'text.primary',
+          zIndex: (theme) => theme.zIndex.modal + 1,
+        }}
+      >
+        <Paper
+          elevation={0}
+          role="status"
+          sx={{
+            alignItems: 'center',
+            border: 1,
+            borderColor: 'rgba(148, 163, 184, 0.36)',
+            borderRadius: 3,
+            boxShadow: '0 22px 70px rgba(15, 23, 42, 0.18)',
+            display: 'grid',
+            gap: 1.25,
+            justifyItems: 'center',
+            maxWidth: 360,
+            mx: 2,
+            p: { xs: 2.5, sm: 3 },
+            textAlign: 'center',
+          }}
+        >
+          <CircularProgress size={30} thickness={4} />
+          <Box component="strong" sx={{ fontSize: 17, lineHeight: 1.35 }}>
+            正在同步云端待办
+          </Box>
+          <Box component="span" sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.6 }}>
+            首次进入云端模式时，需要先把最新数据拉回本机。
+          </Box>
+        </Paper>
+      </Backdrop>
     </Container>
   );
 }

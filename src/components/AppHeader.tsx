@@ -186,7 +186,7 @@ export function AppHeader({
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h1">Todo Matrix</Typography>
             <Typography color="text.secondary" variant="subtitle2">
-              离线优先的 TODO 坐标轴
+              基于艾森豪威尔方法论的待办小工具
             </Typography>
           </Box>
         </Stack>

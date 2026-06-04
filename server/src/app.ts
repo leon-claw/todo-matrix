@@ -22,11 +22,28 @@ const allowedCorsOrigins = new Set([
   ...(process.env.CORS_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? []),
 ]);
 
+function isAllowedCorsOrigin(origin: string) {
+  if (allowedCorsOrigins.has(origin)) {
+    return true;
+  }
+
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      (url.hostname === '127.0.0.1' || url.hostname === 'localhost')
+    );
+  } catch {
+    return false;
+  }
+}
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  if (origin && allowedCorsOrigins.has(origin)) {
+  if (origin && isAllowedCorsOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Session-Token');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader('Vary', 'Origin');

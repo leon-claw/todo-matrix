@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --configLoader runner",
     "dev:client": "vite --host 127.0.0.1 --configLoader runner",
+    "dev:prod-api": "vite --host 127.0.0.1 --mode prod-api --strictPort --configLoader runner",
     "dev:server": "tsx watch server/src/index.ts",
     "build": "tsc -b && vite build --configLoader runner",
     "build:wechat": "node scripts/build-wechat-miniprogram.mjs",
