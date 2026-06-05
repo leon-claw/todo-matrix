@@ -19,10 +19,12 @@ import DeleteSweepRoundedIcon from '@mui/icons-material/DeleteSweepRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import { AppBottomNavigation } from './components/AppBottomNavigation';
 import { AppHeader } from './components/AppHeader';
 import { AuthPanel } from './components/AuthPanel';
 import { ChangePasswordPanel } from './components/ChangePasswordPanel';
 import { DataResolutionPanel } from './components/DataResolutionPanel';
+import { MinePage } from './components/MinePage';
 import { PriorityAxis } from './components/PriorityAxis';
 import { StatsStrip } from './components/StatsStrip';
 import { TaskComposer } from './components/TaskComposer';
@@ -31,6 +33,7 @@ import { useAuth } from './hooks/useAuth';
 import { useCloudTasks } from './hooks/useCloudTasks';
 import { useLocalTasks } from './hooks/useLocalTasks';
 import { ApiError } from './lib/apiClient';
+import type { AppPage } from './lib/appNavigation';
 import type { MatrixTask, TaskFilter, TaskFormValues, TaskMetrics } from './types';
 
 type EditorState =
@@ -71,6 +74,7 @@ export function App() {
   const [migrationBusy, setMigrationBusy] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const [isMobileAxisHidden, setIsMobileAxisHidden] = useState(false);
+  const [activePage, setActivePage] = useState<AppPage>('home');
 
   useEffect(() => {
     setLocalDataResolved(false);
@@ -360,20 +364,14 @@ export function App() {
     <Container
       aria-busy={isCloudInitialLoading}
       maxWidth={false}
-      sx={{ maxWidth: 1500, px: { xs: 1.5, sm: 2.5, md: 3 }, py: { xs: 1.5, md: 2.5 } }}
+      sx={{
+        maxWidth: 1500,
+        pb: { xs: 'calc(88px + env(safe-area-inset-bottom))', md: 12 },
+        pt: { xs: 1.5, md: 2.5 },
+        px: { xs: 1.5, sm: 2.5, md: 3 },
+      }}
     >
-      <AppHeader
-        isCloudMode={isCloudMode}
-        isSyncing={isCloudMode && cloudStore.isSyncing}
-        onChangePassword={() => {
-          setChangePasswordError(null);
-          setChangePasswordDialogOpen(true);
-        }}
-        onCreateTask={openCreateTask}
-        onLogin={() => setAuthDialogOpen(true)}
-        onLogout={handleLogout}
-        user={user}
-      />
+      {activePage === 'home' ? <AppHeader onCreateTask={openCreateTask} /> : null}
 
       {!isOnline ? (
         <Alert severity="warning" variant="filled" sx={{ borderRadius: 2, mb: 2 }}>
@@ -381,7 +379,26 @@ export function App() {
         </Alert>
       ) : null}
 
-      {renderTodoSurface()}
+      {activePage === 'home' ? (
+        renderTodoSurface()
+      ) : (
+        <MinePage
+          isAuthLoading={isAuthLoading}
+          isCloudMode={isCloudMode}
+          isOnline={isOnline}
+          isSyncing={isCloudMode && cloudStore.isSyncing}
+          onChangePassword={() => {
+            setChangePasswordError(null);
+            setChangePasswordDialogOpen(true);
+          }}
+          onLogin={() => setAuthDialogOpen(true)}
+          onLogout={handleLogout}
+          stats={activeStore.stats}
+          user={user}
+        />
+      )}
+
+      <AppBottomNavigation activePage={activePage} onPageChange={setActivePage} />
 
       <Dialog
         fullWidth
