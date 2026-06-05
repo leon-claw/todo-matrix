@@ -1,14 +1,33 @@
 /// <reference types="@electron-forge/plugin-vite/forge-vite-env" />
 
-import { app, BrowserWindow, ipcMain, safeStorage, shell, session } from 'electron';
+import { app, BrowserWindow, ipcMain, net, protocol, safeStorage, shell, session } from 'electron';
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { markDesktopOtaReady, prepareDesktopRenderer, runDesktopOtaUpdateCheck } from './desktopOta';
 
 const DEVELOPMENT_API_BASE = 'http://127.0.0.1:3001';
 const PRODUCTION_API_BASE = 'https://web.jianghong.site/app/todo-matrix';
 const DEFAULT_API_BASE = MAIN_WINDOW_VITE_DEV_SERVER_URL ? DEVELOPMENT_API_BASE : PRODUCTION_API_BASE;
 const DESKTOP_API_BASE = (process.env.TODO_MATRIX_DESKTOP_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '');
+const DEFAULT_DESKTOP_OTA_MANIFEST_URL = `${PRODUCTION_API_BASE}/ota/windows/manifest.json`;
+const DESKTOP_OTA_MANIFEST_URL = (
+  process.env.TODO_MATRIX_DESKTOP_OTA_MANIFEST_URL || DEFAULT_DESKTOP_OTA_MANIFEST_URL
+).trim();
+const DESKTOP_RENDERER_SCHEME = 'todo-matrix';
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: DESKTOP_RENDERER_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
 
 interface DesktopApiRequest {
   url: string;
@@ -24,6 +43,7 @@ interface StoredSession {
 
 let mainWindow: BrowserWindow | null = null;
 let sessionToken: string | null = null;
+let desktopRendererRoot: string | null = null;
 
 function isSquirrelStartupEvent() {
   return process.platform === 'win32' && process.argv.some((argument) => argument.startsWith('--squirrel-'));
@@ -187,7 +207,65 @@ async function handleApiRequest(_event: Electron.IpcMainInvokeEvent, request: De
   };
 }
 
-function createWindow() {
+function shouldUseDesktopOta() {
+  return process.platform === 'win32' && !MAIN_WINDOW_VITE_DEV_SERVER_URL && DESKTOP_OTA_MANIFEST_URL !== '';
+}
+
+function getBuiltinRendererIndexPath() {
+  return path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`);
+}
+
+function isPathInsideDirectory(rootPath: string, candidatePath: string) {
+  const relativePath = path.relative(rootPath, candidatePath);
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
+function registerDesktopRendererProtocol() {
+  protocol.handle(DESKTOP_RENDERER_SCHEME, (request) => {
+    const rendererRoot = desktopRendererRoot ?? path.dirname(getBuiltinRendererIndexPath());
+    const requestUrl = new URL(request.url);
+    const requestPath = decodeURIComponent(requestUrl.pathname || '/index.html');
+    const relativeRequestPath = requestPath.replace(/^\/+/, '') || 'index.html';
+    const filePath = path.resolve(rendererRoot, relativeRequestPath);
+
+    if (!isPathInsideDirectory(rendererRoot, filePath)) {
+      return new Response('Forbidden', { status: 403 });
+    }
+
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+}
+
+async function getRendererIndexPath() {
+  const builtinRendererIndex = getBuiltinRendererIndexPath();
+  if (!shouldUseDesktopOta()) {
+    return builtinRendererIndex;
+  }
+
+  return (
+    await prepareDesktopRenderer({
+      builtinRendererIndex,
+      userDataPath: app.getPath('userData'),
+    })
+  ).indexPath;
+}
+
+function startDesktopOtaUpdateCheck() {
+  if (!shouldUseDesktopOta()) {
+    return;
+  }
+
+  void runDesktopOtaUpdateCheck({
+    manifestUrl: DESKTOP_OTA_MANIFEST_URL,
+    nativeVersion: app.getVersion(),
+    userDataPath: app.getPath('userData'),
+    webBundleVersion: app.getVersion(),
+  }).catch((error) => {
+    console.info('Desktop OTA update check skipped', error);
+  });
+}
+
+async function createWindow() {
   mainWindow = new BrowserWindow({
     height: 860,
     minHeight: 680,
@@ -226,7 +304,9 @@ function createWindow() {
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     void mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    void mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    const rendererIndexPath = await getRendererIndexPath();
+    desktopRendererRoot = path.dirname(rendererIndexPath);
+    void mainWindow.loadURL(`${DESKTOP_RENDERER_SCHEME}://renderer/index.html`);
   }
 }
 
@@ -253,14 +333,22 @@ if (isSquirrelStartupEvent()) {
       session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
         callback(false);
       });
+      registerDesktopRendererProtocol();
 
       await loadSessionToken();
       ipcMain.handle('todo-matrix:api-request', handleApiRequest);
-      createWindow();
+      ipcMain.handle('todo-matrix:desktop-ota-ready', async () => {
+        if (shouldUseDesktopOta()) {
+          await markDesktopOtaReady(app.getPath('userData'));
+        }
+      });
+      await createWindow();
+      startDesktopOtaUpdateCheck();
 
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
-          createWindow();
+          void createWindow();
+          startDesktopOtaUpdateCheck();
         }
       });
     });

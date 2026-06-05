@@ -13,6 +13,7 @@
   },
   "include": [
     "electron/**/*.ts",
+    "src/lib/otaUpdatePolicy.ts",
     "vite.config.ts"
   ]
 }

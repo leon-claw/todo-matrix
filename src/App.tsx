@@ -44,6 +44,7 @@ export function App() {
   const {
     authError,
     changePassword,
+    hasStoredCloudSession,
     isAuthLoading,
     login,
     logout,
@@ -57,7 +58,8 @@ export function App() {
   const isCloudMode = Boolean(user && !migrationRequired);
   const cloudStore = useCloudTasks(Boolean(user));
   const activeStore = isCloudMode ? cloudStore : localStore;
-  const isCloudInitialLoading = isCloudMode && cloudStore.isInitialLoading;
+  const isCloudInitialLoading =
+    (isAuthLoading && hasStoredCloudSession) || (isCloudMode && cloudStore.isInitialLoading);
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MatrixTask | null>(null);
   const [clearCompletedDialogOpen, setClearCompletedDialogOpen] = useState(false);
@@ -567,7 +569,7 @@ export function App() {
             正在同步云端待办
           </Box>
           <Box component="span" sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.6 }}>
-            首次进入云端模式时，需要先把最新数据拉回本机。
+            正在努力拉取数据
           </Box>
         </Paper>
       </Backdrop>

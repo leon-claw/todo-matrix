@@ -8,6 +8,12 @@ const config: CapacitorConfig = {
     hostname: 'todo-matrix.localhost',
     androidScheme: 'https',
   },
+  plugins: {
+    CapacitorUpdater: {
+      autoUpdate: false,
+      statsUrl: '',
+    },
+  },
 };
 
 export default config;

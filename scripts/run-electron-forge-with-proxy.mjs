@@ -11,7 +11,7 @@ if (!command) {
   process.exit(1);
 }
 
-const proxy = process.env.TODO_MATRIX_DESKTOP_PROXY || 'http://localhost:6004';
+const proxy = process.env.TODO_MATRIX_DESKTOP_PROXY || 'http://localhost:7897';
 const electronForgeBin = path.resolve(
   'node_modules',
   '.bin',

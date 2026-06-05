@@ -1,7 +1,14 @@
 node_modules
+
+# Build outputs
 dist
 out
 .vite
+
+# OTA release artifacts; regenerate with npm run release:ota
+ota
+
+# Local environment
 .env
 .env.*
 .DS_Store

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiRequest, clearMobileSessionToken, saveMobileSessionToken } from '../lib/apiClient';
+import {
+  apiRequest,
+  clearMobileSessionToken,
+  hasClientSessionHint,
+  markClientSessionPresent,
+  saveMobileSessionToken,
+} from '../lib/apiClient';
 import type { CurrentUser } from '../types/auth';
 
 interface AuthPayload {
@@ -25,6 +31,7 @@ interface AuthResponse {
 export function useAuth() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [hasStoredCloudSession, setHasStoredCloudSession] = useState(() => hasClientSessionHint());
   const [authError, setAuthError] = useState<string | null>(null);
 
   const refreshUser = useCallback(async () => {
@@ -32,6 +39,13 @@ export function useAuth() {
     try {
       const response = await apiRequest<{ user: CurrentUser | null }>('/api/auth/me');
       setUser(response.user);
+      if (!response.user) {
+        clearMobileSessionToken();
+      }
+      if (response.user) {
+        markClientSessionPresent();
+      }
+      setHasStoredCloudSession(Boolean(response.user));
       setAuthError(null);
     } catch {
       setUser(null);
@@ -50,6 +64,7 @@ export function useAuth() {
       body: payload,
     });
     saveMobileSessionToken(response.token);
+    setHasStoredCloudSession(true);
     setUser(response.user);
     setAuthError(null);
   }, []);
@@ -60,6 +75,7 @@ export function useAuth() {
       body: payload,
     });
     saveMobileSessionToken(response.token);
+    setHasStoredCloudSession(true);
     setUser(response.user);
     setAuthError(null);
   }, []);
@@ -67,6 +83,7 @@ export function useAuth() {
   const logout = useCallback(async () => {
     await apiRequest<void>('/api/auth/logout', { method: 'POST' }).catch(() => undefined);
     clearMobileSessionToken();
+    setHasStoredCloudSession(false);
     setUser(null);
   }, []);
 
@@ -81,6 +98,7 @@ export function useAuth() {
   return {
     authError,
     changePassword,
+    hasStoredCloudSession,
     isAuthLoading,
     login,
     logout,

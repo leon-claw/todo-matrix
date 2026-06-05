@@ -10,4 +10,5 @@ interface DesktopApiRequest {
 contextBridge.exposeInMainWorld('todoMatrixDesktop', {
   apiRequest: (request: DesktopApiRequest) => ipcRenderer.invoke('todo-matrix:api-request', request),
   isDesktop: true,
+  notifyOtaReady: () => ipcRenderer.invoke('todo-matrix:desktop-ota-ready'),
 });

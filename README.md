@@ -199,6 +199,216 @@ server {
 - 浏览器开发者工具里 service worker 注册成功。
 - Chrome / Edge 桌面端可以点击地址栏安装图标，iOS Safari 使用分享菜单里的“添加到主屏幕”。
 
+## Android / Windows OTA 发布流程
+
+热更新发包需要做两件事：
+
+1. 本地构建 `manifest.json` 和对应版本的 `dist.zip`。
+2. 把这些文件上传到生产静态资源目录，让客户端可以通过固定 URL 拉取。
+
+客户端默认访问的地址是：
+
+```text
+https://web.jianghong.site/app/todo-matrix/ota/android/manifest.json
+https://web.jianghong.site/app/todo-matrix/ota/windows/manifest.json
+```
+
+所以服务器上需要有一个静态目录映射到：
+
+```text
+https://web.jianghong.site/app/todo-matrix/ota/
+```
+
+例如服务器目录 `/var/www/web/app/todo-matrix/ota` 应该能访问到：
+
+```text
+/var/www/web/app/todo-matrix/ota/android/manifest.json
+/var/www/web/app/todo-matrix/ota/android/<version>/dist.zip
+/var/www/web/app/todo-matrix/ota/windows/manifest.json
+/var/www/web/app/todo-matrix/ota/windows/<version>/dist.zip
+```
+
+### 推荐：一键构建并发布
+
+先只构建不上传，用来检查产物：
+
+```powershell
+npm run release:ota -- --version 2026.06.05.3 --dry-run
+```
+
+如果生产静态目录就在当前机器上：
+
+```powershell
+npm run release:ota -- --version 2026.06.05.3 --publish-dir C:\nginx\html\app\todo-matrix\ota
+```
+
+如果需要通过 SSH 上传到服务器：
+
+```powershell
+npm run release:ota -- --version 2026.06.05.3 --ssh-host user@server --ssh-path /var/www/web/app/todo-matrix/ota
+```
+
+发布到其他 URL 时，用 `--base-url` 指定 OTA 根地址：
+
+```powershell
+npm run release:ota -- --version 2026.06.05.3 --base-url https://example.com/app/todo-matrix/ota --ssh-host user@server --ssh-path /var/www/example/app/todo-matrix/ota
+```
+
+只发布某一个端：
+
+```powershell
+npm run release:ota -- --version 2026.06.05.3 --channels android --ssh-host user@server --ssh-path /var/www/web/app/todo-matrix/ota
+npm run release:ota -- --version 2026.06.05.3 --channels windows --ssh-host user@server --ssh-path /var/www/web/app/todo-matrix/ota
+```
+
+脚本会先删除本地 `ota` 临时目录，再重新构建 Android 和 Windows OTA 包，然后上传：
+
+```text
+ota/android/manifest.json
+ota/android/<version>/dist.zip
+ota/windows/manifest.json
+ota/windows/<version>/dist.zip
+```
+
+这些都是构建产物，已经被 `.gitignore` 忽略，不需要提交到 Git。
+
+发布后检查：
+
+```powershell
+curl.exe https://web.jianghong.site/app/todo-matrix/ota/android/manifest.json
+curl.exe https://web.jianghong.site/app/todo-matrix/ota/windows/manifest.json
+```
+
+确认 `latestWebBundleVersion` 是本次版本号，并且 `webBundleUrl` 指向的 `dist.zip` 可以下载。
+
+## Android 静默热更新
+
+Android 端使用 Capacitor Web 资源静默更新。第一版只更新 `dist` 里的 HTML、JS、CSS、图片等 Web 资源，不更新原生代码、权限、Capacitor 插件或 APK 本身。
+
+### 更新检查策略
+
+- 仅 Android 原生运行时启用，Web、Electron、小程序不会执行。
+- 启动时调用一次检查。
+- 自动检查有 6 小时本地节流。
+- 只处理 manifest 中 `webPolicy: "silent"` 的 Web bundle。
+- 下载完成后调用 updater 的 `next`，新版会在下次应用进入后台 / 重启后生效，不会立刻刷新当前页面。
+- 如果 manifest 要求的 `minNativeVersion` 高于当前壳版本，则不会应用 Web bundle，需要发新版 APK。
+
+默认 manifest 地址：
+
+```text
+https://web.jianghong.site/app/todo-matrix/ota/android/manifest.json
+```
+
+临时指定其他地址：
+
+```powershell
+$env:TODO_MATRIX_OTA_MANIFEST_URL="https://example.com/app/todo-matrix/ota/android/manifest.json"
+npm run build:android
+```
+
+### 生成热更新包
+
+```powershell
+npm run build:android:ota -- --version 2026.06.05.1
+```
+
+默认会生成：
+
+```text
+ota/android/2026.06.05.1/dist.zip
+ota/android/manifest.json
+```
+
+把整个 `ota/android` 目录上传到生产静态资源目录，让下面两个地址可以访问：
+
+```text
+https://web.jianghong.site/app/todo-matrix/ota/android/manifest.json
+https://web.jianghong.site/app/todo-matrix/ota/android/2026.06.05.1/dist.zip
+```
+
+如果热更新文件部署在其他域名或路径：
+
+```powershell
+npm run build:android:ota -- --version 2026.06.05.1 --base-url https://example.com/todo-matrix/ota/android
+```
+
+manifest 示例：
+
+```json
+{
+  "latestNativeVersion": "1.0.0",
+  "latestWebBundleVersion": "2026.06.05.1",
+  "minNativeVersion": "1.0.0",
+  "nativePolicy": "none",
+  "webPolicy": "silent",
+  "webBundleUrl": "https://web.jianghong.site/app/todo-matrix/ota/android/2026.06.05.1/dist.zip",
+  "sha256": "..."
+}
+```
+
+发布纪律：
+
+- UI、文案、普通前端逻辑、接口兼容适配可以走 Web 静默更新。
+- 新增 Android 权限、原生代码、Capacitor 插件、登录安全策略、隐私采集、应用核心用途变化，必须发新版 APK。
+
+## Windows 静默热更新
+
+Windows 端使用 Electron Renderer Web 资源静默更新。第一版只更新前端页面资源，不更新 Electron 主进程、preload、Node 依赖、原生模块、安装包或系统权限。
+
+### 更新检查策略
+
+- 仅 Windows 生产包启用，本地 Electron 开发模式不会执行。
+- 启动时检查一次 manifest，自动检查有 6 小时本地节流。
+- 只处理 manifest 中 `webPolicy: "silent"` 的 Web bundle。
+- 下载完成后校验 `sha256`，写入待生效版本；新版会在下次启动时加载。
+- 新版启动后会自动上报 ready；如果新版未成功上报 ready，下次启动会回滚到上一个可用版本或内置版本。
+- 运行时使用固定的 `todo-matrix://renderer` 协议加载页面，避免热更新资源路径变化影响本地存储。
+
+默认 manifest 地址：
+
+```text
+https://web.jianghong.site/app/todo-matrix/ota/windows/manifest.json
+```
+
+如果需要在打包 Windows 安装包时临时指定其他 manifest：
+
+```powershell
+$env:TODO_MATRIX_DESKTOP_OTA_MANIFEST_URL="https://example.com/app/todo-matrix/ota/windows/manifest.json"
+npm run desktop:package
+```
+
+### 生成热更新包
+
+```powershell
+npm run build:windows:ota -- --version 2026.06.05.1
+```
+
+默认会生成：
+
+```text
+ota/windows/2026.06.05.1/dist.zip
+ota/windows/manifest.json
+```
+
+把整个 `ota/windows` 目录上传到生产静态资源目录，让下面两个地址可以访问：
+
+```text
+https://web.jianghong.site/app/todo-matrix/ota/windows/manifest.json
+https://web.jianghong.site/app/todo-matrix/ota/windows/2026.06.05.1/dist.zip
+```
+
+如果热更新文件部署在其他域名或路径：
+
+```powershell
+npm run build:windows:ota -- --version 2026.06.05.1 --base-url https://example.com/todo-matrix/ota/windows
+```
+
+发布纪律：
+
+- UI、文案、普通前端逻辑、接口兼容适配可以走 Windows 静默更新。
+- 修改 Electron 主进程、preload、桌面 API 代理、Node 依赖、原生模块、安装包配置、系统权限或安全策略时，必须重新发布 Windows 安装包。
+
 ## 常用排查
 
 - `P1017`：MySQL 尚未完全就绪，稍等后重新执行 `npm run db:deploy`。

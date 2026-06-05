@@ -8,6 +8,7 @@ export const API_BASE = configuredApiBase || (import.meta.env.PROD ? '/app/todo-
 
 const NETWORK_STATUS_EVENT = 'todo-matrix:network-status';
 const MOBILE_SESSION_TOKEN_KEY = 'todo-matrix:mobile-session-token';
+const CLIENT_SESSION_HINT_KEY = 'todo-matrix:client-session-present';
 
 function isCapacitorNative() {
   if (typeof window === 'undefined') {
@@ -50,8 +51,31 @@ function readMobileSessionToken() {
   return localStorage.getItem(MOBILE_SESSION_TOKEN_KEY);
 }
 
+export function hasClientSessionHint() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return Boolean(
+    localStorage.getItem(MOBILE_SESSION_TOKEN_KEY) || localStorage.getItem(CLIENT_SESSION_HINT_KEY),
+  );
+}
+
+export function markClientSessionPresent() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  localStorage.setItem(CLIENT_SESSION_HINT_KEY, '1');
+}
+
 export function saveMobileSessionToken(token: string | null | undefined) {
-  if (!shouldUseClientSessionToken() || !token) {
+  if (typeof window === 'undefined' || !token) {
+    return;
+  }
+
+  markClientSessionPresent();
+  if (!shouldUseClientSessionToken()) {
     return;
   }
 
@@ -64,6 +88,7 @@ export function clearMobileSessionToken() {
   }
 
   localStorage.removeItem(MOBILE_SESSION_TOKEN_KEY);
+  localStorage.removeItem(CLIENT_SESSION_HINT_KEY);
 }
 
 function emitNetworkStatus(online: boolean) {

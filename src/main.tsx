@@ -6,8 +6,12 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import { App } from './App';
+import { startSilentOtaUpdateCheck } from './lib/otaUpdateClient';
 import { appTheme } from './theme';
 import './styles.css';
+
+startSilentOtaUpdateCheck();
+void window.todoMatrixDesktop?.notifyOtaReady();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

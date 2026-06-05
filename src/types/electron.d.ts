@@ -19,6 +19,7 @@ declare global {
     todoMatrixDesktop?: {
       apiRequest<T = unknown>(request: DesktopApiRequest): Promise<DesktopApiResponse<T>>;
       isDesktop: true;
+      notifyOtaReady(): Promise<void>;
     };
   }
 }
