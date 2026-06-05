@@ -2,6 +2,8 @@ html {
   min-width: 320px;
   min-height: 100%;
   background: #f6f8fb;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -11,6 +13,36 @@ body {
     linear-gradient(180deg, #eef3f9 0, #f6f8fb 260px),
     #f6f8fb;
   color: #111827;
+}
+
+* {
+  scrollbar-color: rgba(71, 85, 105, 0.52) rgba(226, 232, 240, 0.42);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.32);
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(100, 116, 139, 0.7), rgba(51, 65, 85, 0.58))
+    border-box;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(59, 130, 246, 0.78), rgba(29, 78, 216, 0.68))
+    border-box;
+  background-clip: padding-box;
 }
 
 #root {

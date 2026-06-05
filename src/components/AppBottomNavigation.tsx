@@ -1,6 +1,7 @@
-import { BottomNavigation, BottomNavigationAction, Box, Paper } from '@mui/material';
+import { Box, ButtonBase, Paper, Typography } from '@mui/material';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
+import { alpha } from '@mui/material/styles';
 import { appNavigationItems, type AppPage } from '../lib/appNavigation';
 
 interface AppBottomNavigationProps {
@@ -16,7 +17,7 @@ const navigationIcons: Record<AppPage, typeof HomeRoundedIcon> = {
 export function AppBottomNavigation({ activePage, onPageChange }: AppBottomNavigationProps) {
   return (
     <Box
-      aria-label="主导航"
+      aria-label="Primary navigation"
       component="nav"
       sx={{
         bottom: { xs: 0, md: 18 },
@@ -33,57 +34,120 @@ export function AppBottomNavigation({ activePage, onPageChange }: AppBottomNavig
     >
       <Paper
         elevation={0}
-        sx={{
-          backdropFilter: 'blur(18px)',
-          bgcolor: 'rgba(255, 255, 255, 0.92)',
+        sx={(theme) => ({
+          backdropFilter: 'blur(22px) saturate(1.2)',
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.88))',
           border: 1,
-          borderColor: 'divider',
+          borderColor: alpha(theme.palette.primary.main, 0.12),
           borderRadius: { xs: 3, md: 999 },
           boxShadow: {
-            xs: '0 -10px 28px rgba(15, 23, 42, 0.10)',
-            md: '0 18px 52px rgba(15, 23, 42, 0.16)',
+            xs: `0 -14px 36px ${alpha(theme.palette.grey[900], 0.12)}`,
+            md: `0 18px 54px ${alpha(theme.palette.grey[900], 0.16)}`,
           },
-          maxWidth: { xs: 420, md: 'none' },
-          minWidth: { md: 278 },
+          maxWidth: { xs: 430, md: 'none' },
+          minWidth: { md: 276 },
           overflow: 'hidden',
+          p: 0.5,
           pointerEvents: 'auto',
+          position: 'relative',
           width: { xs: '100%', md: 'auto' },
-        }}
+        })}
       >
-        <BottomNavigation
-          showLabels
-          value={activePage}
-          onChange={(_, value: AppPage) => onPageChange(value)}
+        <Box
           sx={{
-            bgcolor: 'transparent',
-            height: { xs: 58, md: 52 },
-            px: { xs: 0.5, md: 0.75 },
-            '& .MuiBottomNavigationAction-root': {
-              borderRadius: { xs: 2, md: 999 },
-              color: 'text.secondary',
-              gap: 0.25,
-              minWidth: { xs: 0, md: 112 },
-              mx: { xs: 0.25, md: 0.5 },
-              px: { xs: 1, md: 1.75 },
-              transition: 'background-color 160ms ease, color 160ms ease, transform 160ms ease',
-            },
-            '& .MuiBottomNavigationAction-root.Mui-selected': {
-              bgcolor: 'rgba(29, 78, 216, 0.10)',
-              color: 'primary.main',
-            },
-            '& .MuiBottomNavigationAction-label': {
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: 0,
-            },
+            display: 'grid',
+            gap: 0.5,
+            gridTemplateColumns: `repeat(${appNavigationItems.length}, minmax(0, 1fr))`,
           }}
         >
           {appNavigationItems.map((item) => {
             const Icon = navigationIcons[item.id];
+            const selected = item.id === activePage;
 
-            return <BottomNavigationAction key={item.id} icon={<Icon />} label={item.label} value={item.id} />;
+            return (
+              <ButtonBase
+                key={item.id}
+                aria-current={selected ? 'page' : undefined}
+                onClick={() => onPageChange(item.id)}
+                sx={(theme) => ({
+                  alignItems: 'center',
+                  borderRadius: { xs: 2.5, md: 999 },
+                  color: selected ? 'primary.main' : 'text.secondary',
+                  display: 'flex',
+                  gap: { xs: 0.75, md: 0.85 },
+                  justifyContent: 'center',
+                  minHeight: { xs: 54, md: 48 },
+                  minWidth: { xs: 0, md: 126 },
+                  overflow: 'hidden',
+                  px: { xs: 1.25, md: 1.75 },
+                  position: 'relative',
+                  transition:
+                    'color 180ms ease, transform 180ms ease, background-color 180ms ease',
+                  '&::before': {
+                    background: selected
+                      ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.14)}, ${alpha(
+                          theme.palette.secondary.main,
+                          0.1,
+                        )})`
+                      : 'transparent',
+                    border: selected ? `1px solid ${alpha(theme.palette.primary.main, 0.13)}` : '1px solid transparent',
+                    borderRadius: 'inherit',
+                    content: '""',
+                    inset: 0,
+                    position: 'absolute',
+                    transition: 'background 180ms ease, border-color 180ms ease',
+                  },
+                  '&:hover': {
+                    bgcolor: selected ? 'transparent' : alpha(theme.palette.primary.main, 0.05),
+                    color: selected ? 'primary.main' : 'text.primary',
+                    transform: { xs: 'none', md: 'translateY(-1px)' },
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
+                })}
+              >
+                <Box
+                  sx={(theme) => ({
+                    alignItems: 'center',
+                    bgcolor: selected ? 'primary.main' : alpha(theme.palette.grey[500], 0.1),
+                    borderRadius: 999,
+                    color: selected ? 'primary.contrastText' : 'text.secondary',
+                    display: 'inline-flex',
+                    flex: '0 0 auto',
+                    height: { xs: 30, md: 28 },
+                    justifyContent: 'center',
+                    position: 'relative',
+                    transition: 'background-color 180ms ease, color 180ms ease, box-shadow 180ms ease',
+                    width: { xs: 30, md: 28 },
+                    zIndex: 1,
+                    ...(selected
+                      ? {
+                          boxShadow: `0 10px 22px ${alpha(theme.palette.primary.main, 0.28)}`,
+                        }
+                      : null),
+                  })}
+                >
+                  <Icon sx={{ fontSize: 19 }} />
+                </Box>
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: 12,
+                    fontWeight: selected ? 900 : 800,
+                    letterSpacing: 0,
+                    lineHeight: 1,
+                    position: 'relative',
+                    zIndex: 1,
+                  }}
+                >
+                  {item.label}
+                </Typography>
+              </ButtonBase>
+            );
           })}
-        </BottomNavigation>
+        </Box>
       </Paper>
     </Box>
   );
