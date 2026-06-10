@@ -1,4 +1,4 @@
-export type AppDownloadPlatform = 'android' | 'windows';
+export type AppDownloadPlatform = 'android' | 'macos' | 'windows';
 
 export interface AppDownloadLink {
   description: string;
@@ -15,6 +15,13 @@ export const appDownloadLinks: AppDownloadLink[] = [
     href: 'https://web.jianghong.site/app/todo-matrix/downloads/windows/todo-matrix-windows-latest.zip',
     platform: 'windows',
     title: 'Windows 版',
+  },
+  {
+    description: '适合 macOS 桌面使用，下载 DMG 文件后拖入“应用程序”即可安装。',
+    fileLabel: 'macOS DMG',
+    href: 'https://web.jianghong.site/app/todo-matrix/downloads/macos/todo-matrix-macos-latest.dmg',
+    platform: 'macos',
+    title: 'macOS 版',
   },
   {
     description: '适合 Android 手机安装，首次安装可能需要允许浏览器安装未知来源应用。',

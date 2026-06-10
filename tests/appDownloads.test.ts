@@ -2,14 +2,18 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { appDownloadLinks, getAppDownloadLink } from '../src/lib/appDownloads';
 
-test('defines Windows and Android download links for the downloads page', () => {
+test('defines Windows, macOS, and Android download links for the downloads page', () => {
   assert.deepEqual(
     appDownloadLinks.map((link) => link.platform),
-    ['windows', 'android'],
+    ['windows', 'macos', 'android'],
   );
   assert.equal(
     getAppDownloadLink('windows')?.href,
     'https://web.jianghong.site/app/todo-matrix/downloads/windows/todo-matrix-windows-latest.zip',
+  );
+  assert.equal(
+    getAppDownloadLink('macos')?.href,
+    'https://web.jianghong.site/app/todo-matrix/downloads/macos/todo-matrix-macos-latest.dmg',
   );
   assert.equal(
     getAppDownloadLink('android')?.href,

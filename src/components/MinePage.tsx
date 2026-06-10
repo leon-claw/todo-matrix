@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
 import AndroidRoundedIcon from '@mui/icons-material/AndroidRounded';
+import AppleIcon from '@mui/icons-material/Apple';
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import CleaningServicesRoundedIcon from '@mui/icons-material/CleaningServicesRounded';
@@ -68,7 +69,14 @@ const canShowInstallPrompt = !window.todoMatrixDesktop?.isDesktop && !window.Cap
 
 const downloadIcons: Record<AppDownloadPlatform, typeof LaptopWindowsRoundedIcon> = {
   android: AndroidRoundedIcon,
+  macos: AppleIcon,
   windows: LaptopWindowsRoundedIcon,
+};
+
+const downloadPlatformDetails: Record<AppDownloadPlatform, { color: string; environment: string }> = {
+  android: { color: 'success.main', environment: 'Android' },
+  macos: { color: 'grey.900', environment: 'macOS' },
+  windows: { color: 'primary.main', environment: 'Windows 10 / 11' },
 };
 
 function readRuntimeLabel() {
@@ -450,11 +458,12 @@ function DownloadsPage({
         sx={{
           display: 'grid',
           gap: { xs: 1.5, md: 2 },
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
         }}
       >
         {appDownloadLinks.map((link) => {
           const Icon = downloadIcons[link.platform];
+          const platformDetails = downloadPlatformDetails[link.platform];
 
           return (
             <Paper key={link.platform} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
@@ -462,7 +471,7 @@ function DownloadsPage({
                 <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
                   <Avatar
                     sx={{
-                      bgcolor: link.platform === 'windows' ? 'primary.main' : 'success.main',
+                      bgcolor: platformDetails.color,
                       color: 'primary.contrastText',
                       height: 48,
                       width: 48,
@@ -482,7 +491,7 @@ function DownloadsPage({
                 </Typography>
                 <Divider />
                 <Stack spacing={0.75}>
-                  <InfoRow label="运行环境" value={link.platform === 'windows' ? 'Windows 10 / 11' : 'Android'} />
+                  <InfoRow label="运行环境" value={platformDetails.environment} />
                   <InfoRow label="壳版本" value={nativeVersion} />
                   <InfoRow label="资源版本" value={webBundleVersion} />
                   <InfoRow label="当前环境" value={runtimeLabel} />
