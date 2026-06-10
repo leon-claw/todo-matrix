@@ -239,6 +239,15 @@ export function App() {
     }
   }
 
+  async function handleImportTasks(tasks: MatrixTask[]) {
+    if (isCloudMode) {
+      await cloudStore.replaceCloudTasks(tasks);
+      return;
+    }
+
+    await localStore.replaceLocalTasks(tasks);
+  }
+
   function renderTodoSurface() {
     const showClearCompletedAction = taskFilter === 'all' || taskFilter === 'completed';
 
@@ -393,7 +402,9 @@ export function App() {
           }}
           onLogin={() => setAuthDialogOpen(true)}
           onLogout={handleLogout}
+          onImportTasks={handleImportTasks}
           stats={activeStore.stats}
+          tasks={activeStore.tasks}
           user={user}
         />
       )}

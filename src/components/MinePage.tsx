@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Alert,
   Avatar,
   Box,
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   IconButton,
   List,
@@ -12,6 +18,7 @@ import {
   ListItemIcon,
   ListItemText,
   Paper,
+  Snackbar,
   Stack,
   Typography,
 } from '@mui/material';
@@ -24,6 +31,8 @@ import CleaningServicesRoundedIcon from '@mui/icons-material/CleaningServicesRou
 import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
 import CloudOffRoundedIcon from '@mui/icons-material/CloudOffRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
+import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
 import LaptopWindowsRoundedIcon from '@mui/icons-material/LaptopWindowsRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
@@ -36,6 +45,8 @@ import SystemUpdateRoundedIcon from '@mui/icons-material/SystemUpdateRounded';
 import WifiOffRoundedIcon from '@mui/icons-material/WifiOffRounded';
 import { InstallPrompt } from './InstallPrompt';
 import { appDownloadLinks, type AppDownloadPlatform } from '../lib/appDownloads';
+import { createTaskBackupFile, parseTaskBackup, saveTaskBackupFile } from '../lib/taskBackup';
+import type { MatrixTask } from '../types';
 import type { CurrentUser } from '../types/auth';
 
 type MineView = 'downloads' | 'settings';
@@ -46,6 +57,7 @@ interface MinePageProps {
   isOnline: boolean;
   isSyncing: boolean;
   onChangePassword: () => void;
+  onImportTasks: (tasks: MatrixTask[]) => Promise<void>;
   onLogin: () => void;
   onLogout: () => void;
   stats: {
@@ -54,6 +66,7 @@ interface MinePageProps {
     shownOnAxis: number;
     total: number;
   };
+  tasks: MatrixTask[];
   user: CurrentUser | null;
 }
 
@@ -101,12 +114,24 @@ export function MinePage({
   isOnline,
   isSyncing,
   onChangePassword,
+  onImportTasks,
   onLogin,
   onLogout,
   stats,
+  tasks,
   user,
 }: MinePageProps) {
   const [mineView, setMineView] = useState<MineView>('settings');
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importCandidate, setImportCandidate] = useState<{
+    fileName: string;
+    tasks: MatrixTask[];
+  } | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [exportToast, setExportToast] = useState<{
+    message: string;
+    severity: 'error' | 'info' | 'success';
+  } | null>(null);
   const runtimeLabel = readRuntimeLabel();
   const webBundleVersion = readVersion(
     typeof __TODO_MATRIX_WEB_BUNDLE_VERSION__ === 'undefined' ? undefined : __TODO_MATRIX_WEB_BUNDLE_VERSION__,
@@ -115,6 +140,67 @@ export function MinePage({
     typeof __TODO_MATRIX_NATIVE_VERSION__ === 'undefined' ? undefined : __TODO_MATRIX_NATIVE_VERSION__,
   );
   const avatarLabel = user?.email.slice(0, 1).toUpperCase() || 'M';
+
+  async function handleExportData() {
+    const file = createTaskBackupFile({
+      storageMode: isCloudMode ? 'cloud' : 'local',
+      tasks,
+    });
+
+    if (file.type === 'empty') {
+      setExportToast({ message: '暂无任务数据可导出', severity: 'info' });
+      return;
+    }
+
+    try {
+      await saveTaskBackupFile(file);
+      setExportToast({ message: '数据已导出为 JSON 文件', severity: 'success' });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+
+      setExportToast({ message: '数据导出失败，请稍后重试', severity: 'error' });
+    }
+  }
+
+  async function handleImportFile(file: File) {
+    try {
+      const backup = parseTaskBackup(await file.text());
+      setImportCandidate({
+        fileName: file.name,
+        tasks: backup.tasks,
+      });
+    } catch (error) {
+      setExportToast({
+        message: error instanceof Error ? error.message : '备份文件读取失败',
+        severity: 'error',
+      });
+    }
+  }
+
+  async function confirmImportData() {
+    if (!importCandidate) {
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      await onImportTasks(importCandidate.tasks);
+      setImportCandidate(null);
+      setExportToast({
+        message: `已导入 ${importCandidate.tasks.length} 项任务`,
+        severity: 'success',
+      });
+    } catch {
+      setExportToast({
+        message: isCloudMode ? '云端数据导入失败，请稍后重试' : '本地数据导入失败，请稍后重试',
+        severity: 'error',
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  }
 
   if (mineView === 'downloads') {
     return (
@@ -181,6 +267,18 @@ export function MinePage({
               rightText={isCloudMode ? '云端模式' : '本地模式'}
               title="数据模式"
             />
+            <SettingsRow
+              icon={FileDownloadRoundedIcon}
+              onClick={() => void handleExportData()}
+              rightText="JSON"
+              title="导出数据"
+            />
+            <SettingsRow
+              icon={FileUploadRoundedIcon}
+              onClick={() => importInputRef.current?.click()}
+              rightText="JSON"
+              title="导入数据"
+            />
           </SettingsGroup>
 
           <SettingsGroup>
@@ -234,6 +332,70 @@ export function MinePage({
           </Paper>
         </Stack>
       </Box>
+
+      <Snackbar
+        autoHideDuration={3000}
+        onClose={() => setExportToast(null)}
+        open={Boolean(exportToast)}
+      >
+        {exportToast ? (
+          <Alert
+            onClose={() => setExportToast(null)}
+            severity={exportToast.severity}
+            sx={{ width: '100%' }}
+            variant="filled"
+          >
+            {exportToast.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
+
+      <input
+        ref={importInputRef}
+        accept=".json,application/json"
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (file) {
+            void handleImportFile(file);
+          }
+        }}
+        type="file"
+      />
+
+      <Dialog
+        fullWidth
+        maxWidth="xs"
+        open={Boolean(importCandidate)}
+        onClose={(_, reason) => {
+          if (!isImporting && reason !== 'backdropClick') {
+            setImportCandidate(null);
+          }
+        }}
+      >
+        <DialogTitle>覆盖并导入数据？</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            将从“{importCandidate?.fileName}”导入 {importCandidate?.tasks.length ?? 0} 项任务，并覆盖当前
+            {isCloudMode ? '云端' : '本地'}模式下的全部任务。此操作无法撤销。
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={isImporting} onClick={() => setImportCandidate(null)}>
+            取消
+          </Button>
+          <Button
+            color="error"
+            disabled={isImporting}
+            onClick={() => void confirmImportData()}
+            startIcon={isImporting ? <CircularProgress color="inherit" size={16} /> : <FileUploadRoundedIcon />}
+            variant="contained"
+          >
+            覆盖并导入
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

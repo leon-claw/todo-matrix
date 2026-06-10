@@ -224,6 +224,19 @@ export function useLocalTasks() {
     }
   }, []);
 
+  const replaceLocalTasks = useCallback(async (nextTasks: MatrixTask[]) => {
+    const normalizedTasks = normalizeTasks(nextTasks) ?? [];
+    const sortedTasks = sortTasks(normalizedTasks);
+    try {
+      await saveTasks(sortedTasks);
+      setTasks(sortedTasks);
+      setStorageError(null);
+    } catch {
+      setStorageError('本地数据导入失败，请检查浏览器存储空间。');
+      throw new Error('Local import failed');
+    }
+  }, []);
+
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length;
     const shownOnAxis = tasks.filter((task) => task.showOnAxis && !task.completed).length;
@@ -249,5 +262,6 @@ export function useLocalTasks() {
     deleteTask,
     clearCompletedTasks,
     clearLocalTasks,
+    replaceLocalTasks,
   };
 }
