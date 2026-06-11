@@ -25,6 +25,7 @@ const { VitePlugin } = require('@electron-forge/plugin-vite');
 Module._load = loadModule;
 
 const useSquirrel = process.env.TODO_MATRIX_USE_SQUIRREL === '1';
+const appIconBase = path.join(__dirname, 'assets', 'branding', 'todo-matrix-icon');
 const makers = [
   ...(useSquirrel
     ? [
@@ -33,11 +34,13 @@ const makers = [
           noDelta: true,
           noMsi: true,
           setupExe: 'TodoMatrixSetup.exe',
+          setupIcon: `${appIconBase}.ico`,
         }),
       ]
     : []),
   new MakerDMG({
     format: 'ULFO',
+    icon: `${appIconBase}.icns`,
     name: 'Todo Matrix',
   }),
   new MakerZIP({}, ['darwin', 'win32']),
@@ -53,6 +56,7 @@ module.exports = {
       },
     },
     executableName: 'todo-matrix',
+    icon: appIconBase,
   },
   rebuildConfig: {
     onlyModules: [],

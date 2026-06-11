@@ -30,32 +30,19 @@ export function AppHeader({ onCreateTask }: AppHeaderProps) {
       >
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
           <Box
+            alt=""
             aria-hidden="true"
+            component="img"
+            src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
             sx={{
-              bgcolor: 'grey.900',
               borderRadius: 2,
               boxShadow: '0 12px 28px rgba(17, 24, 39, 0.14)',
-              display: 'grid',
               flex: '0 0 auto',
-              gap: 0.5,
-              gridTemplateColumns: 'repeat(2, 13px)',
               height: 42,
-              p: '6px',
+              objectFit: 'cover',
               width: 42,
-              '& span': {
-                borderRadius: '4px',
-              },
-              '& span:nth-of-type(1)': { bgcolor: 'warning.main' },
-              '& span:nth-of-type(2)': { bgcolor: 'success.main' },
-              '& span:nth-of-type(3)': { bgcolor: 'info.main' },
-              '& span:nth-of-type(4)': { bgcolor: 'secondary.main' },
             }}
-          >
-            <span />
-            <span />
-            <span />
-            <span />
-          </Box>
+          />
           <Box sx={{ minWidth: 0 }}>
             <Typography noWrap variant="h1">
               Todo Matrix

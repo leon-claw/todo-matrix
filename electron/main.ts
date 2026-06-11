@@ -268,6 +268,7 @@ function startDesktopOtaUpdateCheck() {
 async function createWindow() {
   mainWindow = new BrowserWindow({
     height: 860,
+    icon: path.join(app.getAppPath(), 'assets', 'branding', 'todo-matrix-icon-1024.png'),
     minHeight: 680,
     minWidth: 980,
     show: false,

@@ -1,6 +1,18 @@
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_NAME = `todo-matrix-${CACHE_VERSION}`;
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg', '/icons/icon.svg'];
+const APP_INDEX = new URL('index.html', self.registration.scope).toString();
+const APP_SHELL = [
+  '',
+  'index.html',
+  'manifest.webmanifest',
+  'favicon.ico',
+  'favicon-32.png',
+  'favicon-64.png',
+  'apple-touch-icon.png',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
+].map((assetPath) => new URL(assetPath, self.registration.scope).toString());
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -42,7 +54,7 @@ async function networkFirst(request) {
       return cached;
     }
 
-    return caches.match('/index.html');
+    return caches.match(APP_INDEX);
   }
 }
 
@@ -78,6 +90,8 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.png') ||
     url.pathname.endsWith('.svg') ||
     url.pathname.endsWith('.webmanifest')
   ) {
