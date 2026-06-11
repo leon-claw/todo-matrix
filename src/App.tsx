@@ -34,7 +34,8 @@ import { useCloudTasks } from './hooks/useCloudTasks';
 import { useLocalTasks } from './hooks/useLocalTasks';
 import { useAppRoute } from './hooks/useAppRoute';
 import { ApiError } from './lib/apiClient';
-import { getPrimaryPage, shouldUseHistoryBack } from './lib/appRouter';
+import { APP_RELEASES_URL } from './lib/appDownloads';
+import { getPrimaryPage } from './lib/appRouter';
 import type { MatrixTask, TaskFilter, TaskFormValues, TaskMetrics } from './types';
 
 type EditorState =
@@ -394,7 +395,6 @@ export function App() {
         renderTodoSurface()
       ) : (
         <MinePage
-          activeView={route.id === 'downloads' ? 'downloads' : 'settings'}
           isAuthLoading={isAuthLoading}
           isCloudMode={isCloudMode}
           isOnline={isOnline}
@@ -403,16 +403,11 @@ export function App() {
             setChangePasswordError(null);
             setChangePasswordDialogOpen(true);
           }}
-          onBackFromDownloads={() => {
-            if (shouldUseHistoryBack(window.history.state)) {
-              window.history.back();
-            } else {
-              navigate({ id: 'mine' }, 'replace');
-            }
-          }}
           onLogin={() => setAuthDialogOpen(true)}
           onLogout={handleLogout}
-          onOpenDownloads={() => navigate({ id: 'downloads' }, 'push')}
+          onOpenReleases={() => {
+            window.open(APP_RELEASES_URL, '_blank', 'noopener,noreferrer');
+          }}
           onImportTasks={handleImportTasks}
           stats={activeStore.stats}
           tasks={activeStore.tasks}

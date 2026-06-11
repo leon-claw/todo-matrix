@@ -1,6 +1,6 @@
 import type { AppPage } from './appNavigation';
 
-export type AppRoute = { id: 'home' } | { id: 'mine' } | { id: 'downloads' };
+export type AppRoute = { id: 'home' } | { id: 'mine' };
 export type NavigationMode = 'push' | 'replace';
 
 interface HistoryWriter {
@@ -11,12 +11,10 @@ interface HistoryWriter {
 const hashes: Record<AppRoute['id'], string> = {
   home: '#/',
   mine: '#/mine',
-  downloads: '#/mine/downloads',
 };
 
 export function parseAppRoute(hash: string): AppRoute {
-  if (hash === '#/mine') return { id: 'mine' };
-  if (hash === '#/mine/downloads') return { id: 'downloads' };
+  if (hash === '#/mine' || hash === '#/mine/downloads') return { id: 'mine' };
   return { id: 'home' };
 }
 
@@ -35,21 +33,8 @@ export function resolveAppRoute(hash: string) {
   };
 }
 
-export function shouldUseHistoryBack(state: unknown) {
-  return (
-    typeof state === 'object' &&
-    state !== null &&
-    'todoMatrixCanGoBack' in state &&
-    state.todoMatrixCanGoBack === true
-  );
-}
-
 export function getPrimaryPage(route: AppRoute): AppPage {
-  return route.id === 'home' ? 'home' : 'mine';
-}
-
-export function getParentRoute(route: AppRoute): AppRoute | null {
-  return route.id === 'downloads' ? { id: 'mine' } : null;
+  return route.id;
 }
 
 export function navigateToRoute(

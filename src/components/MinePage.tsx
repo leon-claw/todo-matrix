@@ -11,8 +11,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Divider,
-  IconButton,
   List,
   ListItemButton,
   ListItemIcon,
@@ -23,9 +21,6 @@ import {
   Typography,
 } from '@mui/material';
 import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
-import AndroidRoundedIcon from '@mui/icons-material/AndroidRounded';
-import AppleIcon from '@mui/icons-material/Apple';
-import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import CleaningServicesRoundedIcon from '@mui/icons-material/CleaningServicesRounded';
 import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
@@ -34,7 +29,6 @@ import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
 import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
-import LaptopWindowsRoundedIcon from '@mui/icons-material/LaptopWindowsRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import LockResetRoundedIcon from '@mui/icons-material/LockResetRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
@@ -44,23 +38,20 @@ import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
 import SystemUpdateRoundedIcon from '@mui/icons-material/SystemUpdateRounded';
 import WifiOffRoundedIcon from '@mui/icons-material/WifiOffRounded';
 import { InstallPrompt } from './InstallPrompt';
-import { appDownloadLinks, type AppDownloadPlatform } from '../lib/appDownloads';
 import { createTaskBackupFile, parseTaskBackup, saveTaskBackupFile } from '../lib/taskBackup';
 import type { MatrixTask } from '../types';
 import type { CurrentUser } from '../types/auth';
 
 interface MinePageProps {
-  activeView: 'downloads' | 'settings';
   isAuthLoading: boolean;
   isCloudMode: boolean;
   isOnline: boolean;
   isSyncing: boolean;
   onChangePassword: () => void;
-  onBackFromDownloads: () => void;
   onImportTasks: (tasks: MatrixTask[]) => Promise<void>;
   onLogin: () => void;
   onLogout: () => void;
-  onOpenDownloads: () => void;
+  onOpenReleases: () => void;
   stats: {
     active: number;
     completed: number;
@@ -81,18 +72,6 @@ interface SettingsRowProps {
 
 const canShowInstallPrompt = !window.todoMatrixDesktop?.isDesktop && !window.Capacitor?.isNativePlatform?.();
 
-const downloadIcons: Record<AppDownloadPlatform, typeof LaptopWindowsRoundedIcon> = {
-  android: AndroidRoundedIcon,
-  macos: AppleIcon,
-  windows: LaptopWindowsRoundedIcon,
-};
-
-const downloadPlatformDetails: Record<AppDownloadPlatform, { color: string; environment: string }> = {
-  android: { color: 'success.main', environment: 'Android' },
-  macos: { color: 'grey.900', environment: 'macOS' },
-  windows: { color: 'primary.main', environment: 'Windows 10 / 11' },
-};
-
 function readRuntimeLabel() {
   if (window.todoMatrixDesktop?.isDesktop) {
     return 'Windows 桌面端';
@@ -110,17 +89,15 @@ function readVersion(value: string | undefined) {
 }
 
 export function MinePage({
-  activeView,
   isAuthLoading,
   isCloudMode,
   isOnline,
   isSyncing,
-  onBackFromDownloads,
   onChangePassword,
   onImportTasks,
   onLogin,
   onLogout,
-  onOpenDownloads,
+  onOpenReleases,
   stats,
   tasks,
   user,
@@ -205,17 +182,6 @@ export function MinePage({
     }
   }
 
-  if (activeView === 'downloads') {
-    return (
-      <DownloadsPage
-        nativeVersion={nativeVersion}
-        onBack={onBackFromDownloads}
-        runtimeLabel={runtimeLabel}
-        webBundleVersion={webBundleVersion}
-      />
-    );
-  }
-
   return (
     <Box component="main" sx={{ mx: 'auto', width: '100%' }}>
       <Typography
@@ -285,7 +251,7 @@ export function MinePage({
           </SettingsGroup>
 
           <SettingsGroup>
-            <SettingsRow icon={DownloadRoundedIcon} onClick={onOpenDownloads} title="下载应用" />
+            <SettingsRow icon={DownloadRoundedIcon} onClick={onOpenReleases} title="下载应用" />
             {canShowInstallPrompt ? <InstallRow runtimeLabel={runtimeLabel} /> : null}
             <SettingsRow icon={SystemUpdateRoundedIcon} rightText={`Version ${nativeVersion}`} title="版本更新" />
             <SettingsRow disabled icon={CleaningServicesRoundedIcon} rightText="0.00MB" title="清理缓存" />
@@ -588,96 +554,6 @@ function InstallRow({ runtimeLabel }: { runtimeLabel: string }) {
         </Typography>
       </Box>
       <InstallPrompt />
-    </Box>
-  );
-}
-
-function DownloadsPage({
-  nativeVersion,
-  onBack,
-  runtimeLabel,
-  webBundleVersion,
-}: {
-  nativeVersion: string;
-  onBack: () => void;
-  runtimeLabel: string;
-  webBundleVersion: string;
-}) {
-  return (
-    <Box component="main" sx={{ maxWidth: 1120, mx: 'auto', width: '100%' }}>
-      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: { xs: 1.5, md: 2 } }}>
-        <IconButton aria-label="返回我的页面" onClick={onBack}>
-          <ArrowBackRoundedIcon />
-        </IconButton>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography component="h1" variant="h2">
-            应用下载
-          </Typography>
-          <Typography color="text.secondary" variant="body2">
-            选择适合当前设备的安装包
-          </Typography>
-        </Box>
-      </Stack>
-
-      <Box
-        sx={{
-          display: 'grid',
-          gap: { xs: 1.5, md: 2 },
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
-        }}
-      >
-        {appDownloadLinks.map((link) => {
-          const Icon = downloadIcons[link.platform];
-          const platformDetails = downloadPlatformDetails[link.platform];
-
-          return (
-            <Paper key={link.platform} variant="outlined" sx={{ p: { xs: 2, sm: 2.5 } }}>
-              <Stack spacing={2} sx={{ height: '100%' }}>
-                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                  <Avatar
-                    sx={{
-                      bgcolor: platformDetails.color,
-                      color: 'primary.contrastText',
-                      height: 48,
-                      width: 48,
-                    }}
-                  >
-                    <Icon />
-                  </Avatar>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="h2">{link.title}</Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      {link.fileLabel}
-                    </Typography>
-                  </Box>
-                </Stack>
-                <Typography color="text.secondary" variant="body2">
-                  {link.description}
-                </Typography>
-                <Divider />
-                <Stack spacing={0.75}>
-                  <InfoRow label="运行环境" value={platformDetails.environment} />
-                  <InfoRow label="壳版本" value={nativeVersion} />
-                  <InfoRow label="资源版本" value={webBundleVersion} />
-                  <InfoRow label="当前环境" value={runtimeLabel} />
-                </Stack>
-                <Box sx={{ flex: 1 }} />
-                <Button
-                  component="a"
-                  fullWidth
-                  href={link.href}
-                  rel="noreferrer"
-                  startIcon={<DownloadRoundedIcon />}
-                  target="_blank"
-                  variant="contained"
-                >
-                  下载{link.title}
-                </Button>
-              </Stack>
-            </Paper>
-          );
-        })}
-      </Box>
     </Box>
   );
 }
