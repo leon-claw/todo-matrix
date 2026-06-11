@@ -1,29 +1,29 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   buildAppHash,
-  isCanonicalHash,
   navigateToRoute,
-  parseAppRoute,
+  resolveAppRoute,
   type AppRoute,
   type NavigationMode,
 } from '../lib/appRouter';
 
 export function useAppRoute() {
-  const [route, setRoute] = useState<AppRoute>(() => parseAppRoute(window.location.hash));
+  const [route, setRoute] = useState<AppRoute>(
+    () => resolveAppRoute(window.location.hash).route,
+  );
 
   useEffect(() => {
-    const initialRoute = parseAppRoute(window.location.hash);
-    if (!isCanonicalHash(window.location.hash)) {
-      navigateToRoute(initialRoute, 'replace');
-      setRoute(initialRoute);
-    }
-
-    const handleHashChange = () => {
-      setRoute(parseAppRoute(window.location.hash));
+    const syncRoute = () => {
+      const resolved = resolveAppRoute(window.location.hash);
+      if (resolved.shouldReplace) {
+        navigateToRoute(resolved.route, 'replace');
+      }
+      setRoute(resolved.route);
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    syncRoute();
+    window.addEventListener('hashchange', syncRoute);
+    return () => window.removeEventListener('hashchange', syncRoute);
   }, []);
 
   const navigate = useCallback((nextRoute: AppRoute, mode: NavigationMode) => {

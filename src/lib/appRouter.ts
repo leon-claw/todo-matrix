@@ -28,6 +28,13 @@ export function isCanonicalHash(hash: string) {
   return Object.values(hashes).includes(hash);
 }
 
+export function resolveAppRoute(hash: string) {
+  return {
+    route: parseAppRoute(hash),
+    shouldReplace: !isCanonicalHash(hash),
+  };
+}
+
 export function shouldUseHistoryBack(state: unknown) {
   return (
     typeof state === 'object' &&

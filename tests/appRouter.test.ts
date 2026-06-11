@@ -7,6 +7,7 @@ import {
   isCanonicalHash,
   navigateToRoute,
   parseAppRoute,
+  resolveAppRoute,
   shouldUseHistoryBack,
 } from '../src/lib/appRouter';
 
@@ -68,6 +69,29 @@ test('identifies canonical app hashes', () => {
   assert.equal(isCanonicalHash('#/mine/downloads'), true);
   assert.equal(isCanonicalHash(''), false);
   assert.equal(isCanonicalHash('#/unknown'), false);
+});
+
+test('resolves hashes and requests replacement only for non-canonical addresses', () => {
+  assert.deepEqual(resolveAppRoute('#/'), {
+    route: { id: 'home' },
+    shouldReplace: false,
+  });
+  assert.deepEqual(resolveAppRoute('#/mine'), {
+    route: { id: 'mine' },
+    shouldReplace: false,
+  });
+  assert.deepEqual(resolveAppRoute('#/mine/downloads'), {
+    route: { id: 'downloads' },
+    shouldReplace: false,
+  });
+  assert.deepEqual(resolveAppRoute(''), {
+    route: { id: 'home' },
+    shouldReplace: true,
+  });
+  assert.deepEqual(resolveAppRoute('#/unknown'), {
+    route: { id: 'home' },
+    shouldReplace: true,
+  });
 });
 
 test('uses history back only for explicitly marked history state', () => {
