@@ -2,6 +2,8 @@
 
 React + Vite + TypeScript TODO 坐标轴应用。未登录时使用浏览器本地 IndexedDB，登录后使用自建后端和 MySQL 云端存储。
 
+> 📦 下载安装包：[GitHub Releases](https://github.com/leon-claw/todo-matrix/releases/latest) — macOS、Android、Windows
+
 ## 功能
 
 - 本地模式：无需账号，任务保存在当前设备。
