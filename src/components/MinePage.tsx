@@ -49,17 +49,18 @@ import { createTaskBackupFile, parseTaskBackup, saveTaskBackupFile } from '../li
 import type { MatrixTask } from '../types';
 import type { CurrentUser } from '../types/auth';
 
-type MineView = 'downloads' | 'settings';
-
 interface MinePageProps {
+  activeView: 'downloads' | 'settings';
   isAuthLoading: boolean;
   isCloudMode: boolean;
   isOnline: boolean;
   isSyncing: boolean;
   onChangePassword: () => void;
+  onBackFromDownloads: () => void;
   onImportTasks: (tasks: MatrixTask[]) => Promise<void>;
   onLogin: () => void;
   onLogout: () => void;
+  onOpenDownloads: () => void;
   stats: {
     active: number;
     completed: number;
@@ -109,19 +110,21 @@ function readVersion(value: string | undefined) {
 }
 
 export function MinePage({
+  activeView,
   isAuthLoading,
   isCloudMode,
   isOnline,
   isSyncing,
+  onBackFromDownloads,
   onChangePassword,
   onImportTasks,
   onLogin,
   onLogout,
+  onOpenDownloads,
   stats,
   tasks,
   user,
 }: MinePageProps) {
-  const [mineView, setMineView] = useState<MineView>('settings');
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importCandidate, setImportCandidate] = useState<{
     fileName: string;
@@ -202,11 +205,11 @@ export function MinePage({
     }
   }
 
-  if (mineView === 'downloads') {
+  if (activeView === 'downloads') {
     return (
       <DownloadsPage
         nativeVersion={nativeVersion}
-        onBack={() => setMineView('settings')}
+        onBack={onBackFromDownloads}
         runtimeLabel={runtimeLabel}
         webBundleVersion={webBundleVersion}
       />
@@ -282,7 +285,7 @@ export function MinePage({
           </SettingsGroup>
 
           <SettingsGroup>
-            <SettingsRow icon={DownloadRoundedIcon} onClick={() => setMineView('downloads')} title="下载应用" />
+            <SettingsRow icon={DownloadRoundedIcon} onClick={onOpenDownloads} title="下载应用" />
             {canShowInstallPrompt ? <InstallRow runtimeLabel={runtimeLabel} /> : null}
             <SettingsRow icon={SystemUpdateRoundedIcon} rightText={`Version ${nativeVersion}`} title="版本更新" />
             <SettingsRow disabled icon={CleaningServicesRoundedIcon} rightText="0.00MB" title="清理缓存" />

@@ -32,8 +32,9 @@ import { TodoList } from './components/TodoList';
 import { useAuth } from './hooks/useAuth';
 import { useCloudTasks } from './hooks/useCloudTasks';
 import { useLocalTasks } from './hooks/useLocalTasks';
+import { useAppRoute } from './hooks/useAppRoute';
 import { ApiError } from './lib/apiClient';
-import type { AppPage } from './lib/appNavigation';
+import { getPrimaryPage, shouldUseHistoryBack } from './lib/appRouter';
 import type { MatrixTask, TaskFilter, TaskFormValues, TaskMetrics } from './types';
 
 type EditorState =
@@ -74,7 +75,8 @@ export function App() {
   const [migrationBusy, setMigrationBusy] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const [isMobileAxisHidden, setIsMobileAxisHidden] = useState(false);
-  const [activePage, setActivePage] = useState<AppPage>('home');
+  const { navigate, route } = useAppRoute();
+  const activePage = getPrimaryPage(route);
 
   useEffect(() => {
     setLocalDataResolved(false);
@@ -392,6 +394,7 @@ export function App() {
         renderTodoSurface()
       ) : (
         <MinePage
+          activeView={route.id === 'downloads' ? 'downloads' : 'settings'}
           isAuthLoading={isAuthLoading}
           isCloudMode={isCloudMode}
           isOnline={isOnline}
@@ -400,8 +403,16 @@ export function App() {
             setChangePasswordError(null);
             setChangePasswordDialogOpen(true);
           }}
+          onBackFromDownloads={() => {
+            if (shouldUseHistoryBack(window.history.state)) {
+              window.history.back();
+            } else {
+              navigate({ id: 'mine' }, 'replace');
+            }
+          }}
           onLogin={() => setAuthDialogOpen(true)}
           onLogout={handleLogout}
+          onOpenDownloads={() => navigate({ id: 'downloads' }, 'push')}
           onImportTasks={handleImportTasks}
           stats={activeStore.stats}
           tasks={activeStore.tasks}
@@ -409,7 +420,10 @@ export function App() {
         />
       )}
 
-      <AppBottomNavigation activePage={activePage} onPageChange={setActivePage} />
+      <AppBottomNavigation
+        activePage={activePage}
+        onPageChange={(page) => navigate({ id: page }, 'replace')}
+      />
 
       <Dialog
         fullWidth

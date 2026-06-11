@@ -24,6 +24,19 @@ export function buildAppHash(route: AppRoute) {
   return hashes[route.id];
 }
 
+export function isCanonicalHash(hash: string) {
+  return Object.values(hashes).includes(hash);
+}
+
+export function shouldUseHistoryBack(state: unknown) {
+  return (
+    typeof state === 'object' &&
+    state !== null &&
+    'todoMatrixCanGoBack' in state &&
+    state.todoMatrixCanGoBack === true
+  );
+}
+
 export function getPrimaryPage(route: AppRoute): AppPage {
   return route.id === 'home' ? 'home' : 'mine';
 }

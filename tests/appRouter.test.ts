@@ -4,8 +4,10 @@ import {
   buildAppHash,
   getParentRoute,
   getPrimaryPage,
+  isCanonicalHash,
   navigateToRoute,
   parseAppRoute,
+  shouldUseHistoryBack,
 } from '../src/lib/appRouter';
 
 test('parses supported hashes and normalizes unsupported hashes to home', () => {
@@ -58,4 +60,20 @@ test('uses replace navigation for tabs and push navigation for secondary pages',
       url: '#/mine/downloads',
     },
   ]);
+});
+
+test('identifies canonical app hashes', () => {
+  assert.equal(isCanonicalHash('#/'), true);
+  assert.equal(isCanonicalHash('#/mine'), true);
+  assert.equal(isCanonicalHash('#/mine/downloads'), true);
+  assert.equal(isCanonicalHash(''), false);
+  assert.equal(isCanonicalHash('#/unknown'), false);
+});
+
+test('uses history back only for explicitly marked history state', () => {
+  assert.equal(shouldUseHistoryBack({ todoMatrixCanGoBack: true }), true);
+  assert.equal(shouldUseHistoryBack({ todoMatrixCanGoBack: false }), false);
+  assert.equal(shouldUseHistoryBack(null), false);
+  assert.equal(shouldUseHistoryBack(false), false);
+  assert.equal(shouldUseHistoryBack({ todoMatrixCanGoBack: 'true' }), false);
 });
