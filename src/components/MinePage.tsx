@@ -24,12 +24,10 @@ import AccountCircleRoundedIcon from '@mui/icons-material/AccountCircleRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import CleaningServicesRoundedIcon from '@mui/icons-material/CleaningServicesRounded';
 import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
-import CloudOffRoundedIcon from '@mui/icons-material/CloudOffRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
 import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
-import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import LockResetRoundedIcon from '@mui/icons-material/LockResetRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded';
@@ -43,7 +41,6 @@ import type { MatrixTask } from '../types';
 import type { CurrentUser } from '../types/auth';
 
 interface MinePageProps {
-  isAuthLoading: boolean;
   isCloudMode: boolean;
   isOnline: boolean;
   isSyncing: boolean;
@@ -89,7 +86,6 @@ function readVersion(value: string | undefined) {
 }
 
 export function MinePage({
-  isAuthLoading,
   isCloudMode,
   isOnline,
   isSyncing,
@@ -113,9 +109,6 @@ export function MinePage({
     severity: 'error' | 'info' | 'success';
   } | null>(null);
   const runtimeLabel = readRuntimeLabel();
-  const webBundleVersion = readVersion(
-    typeof __TODO_MATRIX_WEB_BUNDLE_VERSION__ === 'undefined' ? undefined : __TODO_MATRIX_WEB_BUNDLE_VERSION__,
-  );
   const nativeVersion = readVersion(
     typeof __TODO_MATRIX_NATIVE_VERSION__ === 'undefined' ? undefined : __TODO_MATRIX_NATIVE_VERSION__,
   );
@@ -258,8 +251,8 @@ export function MinePage({
             <SettingsRow icon={InfoRoundedIcon} rightText={runtimeLabel} title="关于 Todo Matrix" />
           </SettingsGroup>
 
-          <Paper elevation={0} sx={{ bgcolor: 'background.paper', borderRadius: 2, overflow: 'hidden' }}>
-            {user ? (
+          {user ? (
+            <Paper elevation={0} sx={{ bgcolor: 'background.paper', borderRadius: 2, overflow: 'hidden' }}>
               <Button
                 color="error"
                 fullWidth
@@ -270,35 +263,8 @@ export function MinePage({
               >
                 退出登录
               </Button>
-            ) : (
-              <Button
-                disabled={isAuthLoading}
-                fullWidth
-                onClick={onLogin}
-                startIcon={isAuthLoading ? <CircularProgress size={16} /> : <LoginRoundedIcon />}
-                sx={{ borderRadius: 0, minHeight: 52 }}
-                variant="text"
-              >
-                登录/注册
-              </Button>
-            )}
-          </Paper>
-
-          <Paper
-            variant="outlined"
-            sx={{
-              display: { xs: 'none', lg: 'block' },
-              p: 2,
-            }}
-          >
-            <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 1 }}>
-              {isOnline ? <InfoRoundedIcon color="primary" /> : <CloudOffRoundedIcon color="warning" />}
-              <Typography variant="h2">应用信息</Typography>
-            </Stack>
-            <InfoRow label="运行环境" value={runtimeLabel} />
-            <InfoRow label="应用版本" value={nativeVersion} />
-            <InfoRow label="资源版本" value={webBundleVersion} />
-          </Paper>
+            </Paper>
+          ) : null}
         </Stack>
       </Box>
 
@@ -555,26 +521,5 @@ function InstallRow({ runtimeLabel }: { runtimeLabel: string }) {
       </Box>
       <InstallPrompt />
     </Box>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <Stack
-      direction="row"
-      spacing={2}
-      sx={{
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        minWidth: 0,
-      }}
-    >
-      <Typography color="text.secondary" variant="body2">
-        {label}
-      </Typography>
-      <Typography noWrap sx={{ fontWeight: 700, minWidth: 0 }} variant="body2">
-        {value}
-      </Typography>
-    </Stack>
   );
 }

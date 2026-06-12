@@ -19,6 +19,7 @@ import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUnch
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { type MouseEvent, useState } from 'react';
+import { formatTaskDisplayTitle } from '../lib/taskPresentation';
 import type { MatrixTask, TaskMetrics } from '../types';
 import { SubtasksPreview } from './SubtasksPreview';
 
@@ -92,28 +93,29 @@ export function TaskCard({
             aria-expanded={isExpanded}
             onClick={() => setIsExpanded((current) => !current)}
             sx={{
+              alignItems: 'flex-start',
               borderRadius: 1,
-              display: 'block',
-              py: 0.35,
+              display: 'flex',
+              justifyContent: 'flex-start',
+              minHeight: 40,
+              pt: '9px',
               textAlign: 'left',
               width: '100%',
             }}
           >
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0 }}>
-              <Typography
-                component="h3"
-                sx={{
-                  fontWeight: 700,
-                  lineHeight: 1.35,
-                  minWidth: 0,
-                  overflowWrap: 'anywhere',
-                  textDecoration: task.completed ? 'line-through' : 'none',
-                }}
-                variant="body1"
-              >
-                {task.title}
-              </Typography>
-            </Stack>
+            <Typography
+              component="h3"
+              sx={{
+                fontWeight: 700,
+                lineHeight: 1.35,
+                minWidth: 0,
+                overflowWrap: 'anywhere',
+                textDecoration: task.completed ? 'line-through' : 'none',
+              }}
+              variant="body1"
+            >
+              {formatTaskDisplayTitle(task)}
+            </Typography>
           </ButtonBase>
         </Box>
 
@@ -196,63 +198,28 @@ export function TaskCard({
 
           <Divider sx={{ my: 1.5 }} />
 
-          <Stack spacing={1.75}>
-            <Box>
-              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
-                <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
-                  进度
-                </Typography>
-                <Typography color="text.secondary" variant="caption">
-                  {task.progress}%
-                </Typography>
-              </Stack>
-              <Slider
-                aria-label="进度"
-                disabled={task.autoProgress}
-                max={100}
-                min={0}
-                size="small"
-                value={task.progress}
-                valueLabelDisplay="auto"
-                onChange={(_, value) =>
-                  onMetricsChange(task.id, { progress: Array.isArray(value) ? value[0] : value })
-                }
-              />
-            </Box>
-
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
-                  重要程度 {task.importance}
-                </Typography>
-                <Slider
-                  aria-label="重要程度"
-                  max={100}
-                  min={0}
-                  size="small"
-                  value={task.importance}
-                  onChange={(_, value) =>
-                    onMetricsChange(task.id, { importance: Array.isArray(value) ? value[0] : value })
-                  }
-                />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.5 }} variant="caption">
-                  紧急程度 {task.urgency}
-                </Typography>
-                <Slider
-                  aria-label="紧急程度"
-                  max={100}
-                  min={0}
-                  size="small"
-                  value={task.urgency}
-                  onChange={(_, value) =>
-                    onMetricsChange(task.id, { urgency: Array.isArray(value) ? value[0] : value })
-                  }
-                />
-              </Box>
+          <Box>
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
+              <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
+                进度
+              </Typography>
+              <Typography color="text.secondary" variant="caption">
+                {task.progress}%
+              </Typography>
             </Stack>
-          </Stack>
+            <Slider
+              aria-label="进度"
+              disabled={task.autoProgress}
+              max={100}
+              min={0}
+              size="small"
+              value={task.progress}
+              valueLabelDisplay="auto"
+              onChange={(_, value) =>
+                onMetricsChange(task.id, { progress: Array.isArray(value) ? value[0] : value })
+              }
+            />
+          </Box>
         </Box>
       </Collapse>
     </Paper>

@@ -73,6 +73,8 @@ export function App() {
   const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
   const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
   const [isPasswordChanging, setIsPasswordChanging] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [migrationBusy, setMigrationBusy] = useState(false);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
   const [isMobileAxisHidden, setIsMobileAxisHidden] = useState(false);
@@ -199,10 +201,20 @@ export function App() {
     }
   }
 
-  async function handleLogout() {
-    await logout();
-    setChangePasswordDialogOpen(false);
-    setLocalDataResolved(false);
+  async function requestLogout() {
+    setLogoutConfirmOpen(true);
+  }
+
+  async function confirmLogout() {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      setChangePasswordDialogOpen(false);
+      setLocalDataResolved(false);
+      setLogoutConfirmOpen(false);
+    } finally {
+      setIsLoggingOut(false);
+    }
   }
 
   async function handleChangePassword(currentPassword: string, nextPassword: string) {
@@ -260,7 +272,7 @@ export function App() {
           isBusy={migrationBusy}
           localCount={localStore.tasks.length}
           onClearLocal={handleClearLocalOnly}
-          onLogout={handleLogout}
+          onLogout={requestLogout}
           onReplaceCloud={handleReplaceCloudWithLocal}
         />
       );
@@ -383,7 +395,16 @@ export function App() {
         px: { xs: 1.5, sm: 2.5, md: 3 },
       }}
     >
-      {activePage === 'home' ? <AppHeader onCreateTask={openCreateTask} /> : null}
+      {activePage === 'home' ? (
+        <AppHeader
+          hasUser={Boolean(user)}
+          isAuthLoading={isAuthLoading}
+          isCloudMode={isCloudMode}
+          isSyncing={isCloudMode && cloudStore.isSyncing}
+          onCreateTask={openCreateTask}
+          onLogin={() => setAuthDialogOpen(true)}
+        />
+      ) : null}
 
       {!isOnline ? (
         <Alert severity="warning" variant="filled" sx={{ borderRadius: 2, mb: 2 }}>
@@ -395,7 +416,6 @@ export function App() {
         renderTodoSurface()
       ) : (
         <MinePage
-          isAuthLoading={isAuthLoading}
           isCloudMode={isCloudMode}
           isOnline={isOnline}
           isSyncing={isCloudMode && cloudStore.isSyncing}
@@ -404,7 +424,7 @@ export function App() {
             setChangePasswordDialogOpen(true);
           }}
           onLogin={() => setAuthDialogOpen(true)}
-          onLogout={handleLogout}
+          onLogout={requestLogout}
           onOpenReleases={() => {
             window.open(APP_RELEASES_URL, '_blank', 'noopener,noreferrer');
           }}
@@ -437,6 +457,40 @@ export function App() {
         <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
           <AuthPanel error={authError} isLoading={isAuthLoading} onLogin={handleLogin} onRegister={handleRegister} />
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        aria-labelledby="logout-confirm-title"
+        fullWidth
+        maxWidth="xs"
+        open={logoutConfirmOpen}
+        onClose={(_, reason) => {
+          if (!isLoggingOut && reason !== 'backdropClick') {
+            setLogoutConfirmOpen(false);
+          }
+        }}
+        role="alertdialog"
+      >
+        <DialogTitle id="logout-confirm-title">退出登录？</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            退出后将切换回本地模式，当前账号的云端任务仍会保留。
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={isLoggingOut} onClick={() => setLogoutConfirmOpen(false)}>
+            取消
+          </Button>
+          <Button
+            color="error"
+            disabled={isLoggingOut}
+            onClick={() => void confirmLogout()}
+            startIcon={isLoggingOut ? <CircularProgress color="inherit" size={16} /> : undefined}
+            variant="contained"
+          >
+            确认退出
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog

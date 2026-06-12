@@ -1,11 +1,34 @@
-import { Box, Button, Stack, Typography } from '@mui/material';
+import { Box, Button, Chip, CircularProgress, Stack, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
+import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
+import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
+import { getHeaderAccountState } from '../lib/headerAccountState';
 
 interface AppHeaderProps {
+  hasUser: boolean;
+  isAuthLoading: boolean;
+  isCloudMode: boolean;
+  isSyncing: boolean;
   onCreateTask?: () => void;
+  onLogin: () => void;
 }
 
-export function AppHeader({ onCreateTask }: AppHeaderProps) {
+export function AppHeader({
+  hasUser,
+  isAuthLoading,
+  isCloudMode,
+  isSyncing,
+  onCreateTask,
+  onLogin,
+}: AppHeaderProps) {
+  const accountState = getHeaderAccountState({
+    hasUser,
+    isAuthLoading,
+    isCloudMode,
+    isSyncing,
+  });
+
   return (
     <Box
       component="header"
@@ -21,7 +44,7 @@ export function AppHeader({ onCreateTask }: AppHeaderProps) {
     >
       <Stack
         direction="row"
-        spacing={2}
+        spacing={{ xs: 1, sm: 2 }}
         sx={{
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -53,18 +76,64 @@ export function AppHeader({ onCreateTask }: AppHeaderProps) {
           </Box>
         </Stack>
 
-        {onCreateTask ? (
-          <Button
-            disableElevation
-            onClick={onCreateTask}
-            startIcon={<AddRoundedIcon />}
-            type="button"
-            variant="contained"
-            sx={{ flex: '0 0 auto' }}
-          >
-            添加任务
-          </Button>
-        ) : null}
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flex: '0 0 auto' }}>
+          {onCreateTask ? (
+            <Button
+              aria-label="添加任务"
+              disableElevation
+              onClick={onCreateTask}
+              startIcon={<AddRoundedIcon />}
+              type="button"
+              variant="contained"
+              sx={{
+                flex: '0 0 auto',
+                minWidth: { xs: 42, sm: 96 },
+                px: { xs: 1, sm: 1.75 },
+                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+              }}
+            >
+              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+                添加任务
+              </Box>
+            </Button>
+          ) : null}
+
+          {accountState.kind === 'login' ? (
+            <Button
+              disabled={accountState.disabled}
+              onClick={onLogin}
+              startIcon={
+                accountState.loading ? (
+                  <CircularProgress aria-label="登录状态加载中" color="inherit" size={14} />
+                ) : (
+                  <LoginRoundedIcon />
+                )
+              }
+              type="button"
+              variant="outlined"
+              sx={{ flex: '0 0 auto', minWidth: { xs: 68, sm: 82 } }}
+            >
+              {accountState.label}
+            </Button>
+          ) : (
+            <Chip
+              color={isCloudMode ? 'primary' : 'default'}
+              icon={
+                accountState.loading ? (
+                  <CircularProgress aria-label="同步中" color="inherit" size={14} />
+                ) : isCloudMode ? (
+                  <CloudDoneRoundedIcon />
+                ) : (
+                  <StorageRoundedIcon />
+                )
+              }
+              label={accountState.label}
+              size="small"
+              variant={isCloudMode ? 'filled' : 'outlined'}
+              sx={{ fontWeight: 700 }}
+            />
+          )}
+        </Stack>
       </Stack>
     </Box>
   );

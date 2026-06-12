@@ -1,0 +1,190 @@
+"""Regenerate transparent Todo Matrix icons.
+
+Requires Pillow: python -m pip install pillow
+"""
+
+from pathlib import Path
+
+from PIL import Image, ImageFilter
+
+
+ROOT = Path(__file__).resolve().parents[1]
+BRANDING = ROOT / "assets" / "branding"
+PUBLIC = ROOT / "public"
+ANDROID_RES = ROOT / "android" / "app" / "src" / "main" / "res"
+SOURCE = BRANDING / "todo-matrix-mark.png"
+
+RESAMPLING = Image.Resampling.LANCZOS
+
+
+def despill_transparent_edges(image: Image.Image) -> Image.Image:
+    rgba = image.convert("RGBA")
+    pixels = rgba.load()
+    width, height = rgba.size
+    replacements: list[tuple[int, int, tuple[int, int, int, int]]] = []
+
+    for y in range(height):
+        for x in range(width):
+            red, green, blue, alpha = pixels[x, y]
+            if alpha == 0 or alpha == 255:
+                continue
+
+            replacement = None
+            for radius in range(1, 9):
+                candidates = []
+                for sample_y in range(max(0, y - radius), min(height, y + radius + 1)):
+                    for sample_x in range(max(0, x - radius), min(width, x + radius + 1)):
+                        if max(abs(sample_x - x), abs(sample_y - y)) != radius:
+                            continue
+                        sample = pixels[sample_x, sample_y]
+                        if sample[3] == 255:
+                            distance = (sample_x - x) ** 2 + (sample_y - y) ** 2
+                            candidates.append((distance, sample))
+                if candidates:
+                    replacement = min(candidates, key=lambda candidate: candidate[0])[1]
+                    break
+
+            if replacement is not None:
+                replacements.append(
+                    (x, y, (replacement[0], replacement[1], replacement[2], alpha))
+                )
+            elif red > 180 and green > 180 and blue > 180:
+                replacements.append((x, y, (15, 27, 48, alpha)))
+
+    for x, y, replacement in replacements:
+        pixels[x, y] = replacement
+
+    return rgba
+
+
+def extract_transparent_mark(source: Image.Image) -> Image.Image:
+    rgba = source.convert("RGBA")
+    alpha = rgba.getchannel("A")
+
+    if alpha.getextrema()[0] < 255:
+        mark = rgba
+    else:
+        grayscale = rgba.convert("L")
+        width, height = rgba.size
+        pixels = grayscale.load()
+        row_spans: list[tuple[int, int] | None] = []
+
+        for y in range(height):
+            dark_pixels = [x for x in range(width) if pixels[x, y] < 120]
+            row_spans.append(
+                (dark_pixels[0], dark_pixels[-1]) if dark_pixels else None
+            )
+
+        rows = [y for y, span in enumerate(row_spans) if span is not None]
+        if not rows:
+            raise ValueError("Could not locate the dark Todo Matrix mark.")
+
+        top, bottom = rows[0], rows[-1]
+        left = min(row_spans[y][0] for y in rows if row_spans[y] is not None)
+        right = max(row_spans[y][1] for y in rows if row_spans[y] is not None)
+        side = max(right - left + 1, bottom - top + 1)
+        center_x = (left + right) / 2
+        center_y = (top + bottom) / 2
+        crop_left = round(center_x - side / 2)
+        crop_top = round(center_y - side / 2)
+        crop_box = (
+            crop_left,
+            crop_top,
+            crop_left + side,
+            crop_top + side,
+        )
+
+        cropped = rgba.crop(crop_box)
+        mask = Image.new("L", cropped.size, 0)
+        mask_pixels = mask.load()
+
+        for y in range(crop_box[1], crop_box[3]):
+            span = row_spans[y] if 0 <= y < height else None
+            if span is None:
+                continue
+            start = max(span[0], crop_box[0]) - crop_box[0]
+            end = min(span[1], crop_box[2] - 1) - crop_box[0]
+            for x in range(start, end + 1):
+                mask_pixels[x, y - crop_box[1]] = 255
+
+        mask = mask.filter(ImageFilter.MinFilter(5))
+        mask = mask.filter(ImageFilter.GaussianBlur(0.8))
+        cropped.putalpha(mask)
+        mark = cropped
+
+    square_side = max(mark.size)
+    square = Image.new("RGBA", (square_side, square_side), (0, 0, 0, 0))
+    square.alpha_composite(
+        mark,
+        ((square_side - mark.width) // 2, (square_side - mark.height) // 2),
+    )
+    return despill_transparent_edges(square)
+
+
+def resized(mark: Image.Image, size: int, inset: float = 0) -> Image.Image:
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    content_size = max(1, round(size * (1 - inset * 2)))
+    content = mark.resize((content_size, content_size), RESAMPLING)
+    offset = (size - content_size) // 2
+    canvas.alpha_composite(content, (offset, offset))
+    return canvas
+
+
+def save_png(mark: Image.Image, path: Path, size: int, inset: float = 0) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    resized(mark, size, inset).save(path, optimize=True)
+
+
+def generate_android_icons(mark: Image.Image) -> None:
+    densities = {
+        "mdpi": (48, 108),
+        "hdpi": (72, 162),
+        "xhdpi": (96, 216),
+        "xxhdpi": (144, 324),
+        "xxxhdpi": (192, 432),
+    }
+
+    for density, (legacy_size, foreground_size) in densities.items():
+        directory = ANDROID_RES / f"mipmap-{density}"
+        save_png(mark, directory / "ic_launcher.png", legacy_size)
+        save_png(mark, directory / "ic_launcher_round.png", legacy_size)
+        save_png(
+            mark,
+            directory / "ic_launcher_foreground.png",
+            foreground_size,
+            inset=0.165,
+        )
+
+
+def main() -> None:
+    mark = extract_transparent_mark(Image.open(SOURCE))
+    transparent_source = resized(mark, 1254)
+    transparent_source.save(BRANDING / "todo-matrix-icon-source.png", optimize=True)
+
+    save_png(mark, BRANDING / "todo-matrix-icon-1024.png", 1024)
+
+    icon_1024 = resized(mark, 1024)
+    icon_1024.save(
+        BRANDING / "todo-matrix-icon.ico",
+        format="ICO",
+        sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+    )
+    icon_1024.save(BRANDING / "todo-matrix-icon.icns", format="ICNS")
+
+    save_png(mark, PUBLIC / "favicon-32.png", 32)
+    save_png(mark, PUBLIC / "favicon-64.png", 64)
+    save_png(mark, PUBLIC / "apple-touch-icon.png", 180)
+    save_png(mark, PUBLIC / "icons" / "icon-192.png", 192)
+    save_png(mark, PUBLIC / "icons" / "icon-512.png", 512)
+    save_png(mark, PUBLIC / "icons" / "icon-maskable-512.png", 512, inset=0.1)
+    icon_1024.save(
+        PUBLIC / "favicon.ico",
+        format="ICO",
+        sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64)],
+    )
+
+    generate_android_icons(mark)
+
+
+if __name__ == "__main__":
+    main()

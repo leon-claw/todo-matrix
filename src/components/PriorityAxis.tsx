@@ -7,6 +7,7 @@ import { GraphicComponent, GridComponent, MarkLineComponent, TooltipComponent } 
 import { ScatterChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
 import type { MatrixTask, TaskMetrics } from '../types';
+import { formatTaskDisplayTitle } from '../lib/taskPresentation';
 
 echarts.use([
   GridComponent,
@@ -169,7 +170,7 @@ function getLabelStyle(title: string, active: boolean) {
 }
 
 function getAxisLabelText(task: MatrixTask) {
-  return task.progress > 0 ? `${task.progress}% ${task.title}` : task.title;
+  return formatTaskDisplayTitle(task);
 }
 
 function preventNativeGesture(event?: ZrPointerEvent) {
