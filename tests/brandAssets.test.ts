@@ -90,6 +90,130 @@ function alphaAt(image: PngImage, x: number, y: number) {
   return image.data[(y * image.width + x) * 4 + 3];
 }
 
+function countPixels(
+  image: PngImage,
+  predicate: (red: number, green: number, blue: number, alpha: number) => boolean,
+) {
+  let count = 0;
+  for (let offset = 0; offset < image.data.length; offset += 4) {
+    if (
+      predicate(
+        image.data[offset],
+        image.data[offset + 1],
+        image.data[offset + 2],
+        image.data[offset + 3],
+      )
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+test('brand mark matches the white Todo Matrix tile with a checked orange quadrant', () => {
+  const image = readRgbaPng('assets/branding/todo-matrix-mark.png');
+  const whitePixels = countPixels(
+    image,
+    (red, green, blue, alpha) =>
+      alpha > 240 && red > 245 && green > 245 && blue > 245,
+  );
+  const orangePixels = countPixels(
+    image,
+    (red, green, blue, alpha) =>
+      alpha > 240 && red > 220 && green > 80 && green < 190 && blue < 80,
+  );
+  const greenPixels = countPixels(
+    image,
+    (red, green, blue, alpha) =>
+      alpha > 240 && red < 80 && green > 150 && blue > 80 && blue < 190,
+  );
+  const bluePixels = countPixels(
+    image,
+    (red, green, blue, alpha) =>
+      alpha > 240 && red < 80 && green > 80 && green < 180 && blue > 190,
+  );
+  const pinkPixels = countPixels(
+    image,
+    (red, green, blue, alpha) =>
+      alpha > 240 && red > 200 && green < 100 && blue > 60 && blue < 170,
+  );
+  let checkedWhitePixels = 0;
+  for (let y = Math.round(image.height * 0.25); y < Math.round(image.height * 0.42); y += 1) {
+    for (let x = Math.round(image.width * 0.25); x < Math.round(image.width * 0.45); x += 1) {
+      const offset = (y * image.width + x) * 4;
+      if (
+        image.data[offset + 3] > 240 &&
+        image.data[offset] > 245 &&
+        image.data[offset + 1] > 245 &&
+        image.data[offset + 2] > 245
+      ) {
+        checkedWhitePixels += 1;
+      }
+    }
+  }
+
+  assert.ok(whitePixels > image.width * image.height * 0.2, 'white tile/check is missing');
+  assert.ok(
+    checkedWhitePixels > image.width * image.height * 0.005,
+    'white checkmark is missing from the orange quadrant',
+  );
+  assert.ok(orangePixels > image.width * image.height * 0.06, 'orange quadrant is missing');
+  assert.ok(greenPixels > image.width * image.height * 0.06, 'green quadrant is missing');
+  assert.ok(bluePixels > image.width * image.height * 0.06, 'blue quadrant is missing');
+  assert.ok(pinkPixels > image.width * image.height * 0.06, 'pink quadrant is missing');
+});
+
+test('service worker invalidates the previous cached brand assets', () => {
+  const serviceWorker = readFileSync('public/sw.js', 'utf8');
+  const indexHtml = readFileSync('index.html', 'utf8');
+  const manifest = readFileSync('public/manifest.webmanifest', 'utf8');
+  assert.match(serviceWorker, /const CACHE_VERSION = 'v4';/);
+  assert.match(indexHtml, /favicon\.ico\?v=4/);
+  assert.match(indexHtml, /manifest\.webmanifest\?v=4/);
+  assert.match(manifest, /icon-192\.png\?v=4/);
+  assert.match(manifest, /icon-512\.png\?v=4/);
+});
+
+test('browser favicons use binary transparency instead of translucent outer pixels', () => {
+  for (const path of ['public/favicon-32.png', 'public/favicon-64.png']) {
+    const image = readRgbaPng(path);
+    for (let offset = 3; offset < image.data.length; offset += 4) {
+      const alpha = image.data[offset];
+      assert.equal(
+        alpha === 0 || alpha === 255,
+        true,
+        `${path} contains a translucent favicon pixel with alpha ${alpha}`,
+      );
+    }
+  }
+});
+
+test('all platform icons omit the outer drop shadow', () => {
+  for (const path of [
+    'assets/branding/todo-matrix-icon-1024.png',
+    'public/apple-touch-icon.png',
+    'public/icons/icon-192.png',
+    'public/icons/icon-512.png',
+    ...['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'].flatMap((density) =>
+      ['ic_launcher.png', 'ic_launcher_foreground.png', 'ic_launcher_round.png'].map(
+        (fileName) => `android/app/src/main/res/mipmap-${density}/${fileName}`,
+      ),
+    ),
+  ]) {
+    const image = readRgbaPng(path);
+    const samples = [
+      alphaAt(image, Math.round(image.width * 0.5), Math.round(image.height * 0.98)),
+      alphaAt(image, Math.round(image.width * 0.02), Math.round(image.height * 0.5)),
+      alphaAt(image, Math.round(image.width * 0.98), Math.round(image.height * 0.5)),
+    ];
+    assert.equal(
+      samples.every((alpha) => alpha <= 8),
+      true,
+      `${path} must not contain a visible outer drop shadow`,
+    );
+  }
+});
+
 test('brand and web icons use transparent outer edges', () => {
   const paths = [
     'assets/branding/todo-matrix-icon-source.png',
@@ -118,14 +242,5 @@ test('brand and web icons use transparent outer edges', () => {
     ];
     assert.deepEqual(corners, [0, 0, 0, 0], `${path} must have transparent corners`);
 
-    for (let offset = 0; offset < image.data.length; offset += 4) {
-      const red = image.data[offset];
-      const green = image.data[offset + 1];
-      const blue = image.data[offset + 2];
-      const alpha = image.data[offset + 3];
-      const hasVisibleWhiteFringe =
-        alpha > 16 && alpha < 255 && red > 220 && green > 220 && blue > 220;
-      assert.equal(hasVisibleWhiteFringe, false, `${path} must not contain a white alpha fringe`);
-    }
   }
 });

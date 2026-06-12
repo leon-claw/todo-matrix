@@ -16,6 +16,9 @@
     "build:android:ota": "node scripts/build-android-ota.mjs",
     "build:windows:ota": "node scripts/build-windows-ota.mjs",
     "release:ota": "node scripts/release-ota.mjs",
+    "release:build:windows": "powershell -ExecutionPolicy Bypass -File scripts/release/build-windows.ps1",
+    "release:build:mac": "bash scripts/release/build-mac.sh",
+    "release:github": "node scripts/release/github-release.mjs",
     "build:wechat": "node scripts/build-wechat-miniprogram.mjs",
     "desktop:dev": "electron-forge start",
     "desktop:dev:proxy": "node scripts/run-electron-forge-with-proxy.mjs start",
@@ -57,6 +60,7 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
     "@electron-forge/cli": "^7.11.2",
     "@electron-forge/maker-dmg": "^7.11.2",
     "@electron-forge/maker-squirrel": "^7.11.2",

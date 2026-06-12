@@ -3,9 +3,10 @@
 Requires Pillow: python -m pip install pillow
 """
 
+import argparse
 from pathlib import Path
 
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +16,54 @@ ANDROID_RES = ROOT / "android" / "app" / "src" / "main" / "res"
 SOURCE = BRANDING / "todo-matrix-mark.png"
 
 RESAMPLING = Image.Resampling.LANCZOS
+
+
+def import_reference_icon(path: Path) -> Image.Image:
+    reference = Image.open(path).convert("RGB")
+    width, height = reference.size
+    if width != height:
+        raise ValueError("The brand reference must use a square canvas.")
+
+    def scaled(value: float) -> int:
+        return round(value * width / 1254)
+
+    crop_left = scaled(128)
+    crop_top = scaled(128)
+    crop_right = scaled(1126)
+    crop_bottom = scaled(1126)
+    cropped = reference.crop((crop_left, crop_top, crop_right, crop_bottom))
+
+    card_box = (
+        scaled(192) - crop_left,
+        scaled(161) - crop_top,
+        scaled(1065) - crop_left,
+        scaled(1072) - crop_top,
+    )
+    card_radius = scaled(205)
+
+    card_mask = Image.new("L", cropped.size, 0)
+    ImageDraw.Draw(card_mask).rounded_rectangle(
+        card_box,
+        radius=card_radius,
+        fill=255,
+    )
+    card_mask = card_mask.filter(ImageFilter.GaussianBlur(max(0.5, scaled(0.7))))
+
+    shadow_source = Image.new("L", cropped.size, 0)
+    shadow_source.paste(card_mask, (0, scaled(14)))
+    shadow_mask = shadow_source.filter(ImageFilter.GaussianBlur(scaled(24)))
+    shadow_mask = shadow_mask.point(lambda value: round(value * 0.22))
+
+    result = Image.new("RGBA", cropped.size, (0, 0, 0, 0))
+    shadow = Image.new("RGBA", cropped.size, (35, 42, 52, 0))
+    shadow.putalpha(shadow_mask)
+    result.alpha_composite(shadow)
+
+    card = cropped.convert("RGBA")
+    card.putalpha(card_mask)
+    result.alpha_composite(card)
+
+    return result.resize((1024, 1024), RESAMPLING)
 
 
 def despill_transparent_edges(image: Image.Image) -> Image.Image:
@@ -130,9 +179,57 @@ def resized(mark: Image.Image, size: int, inset: float = 0) -> Image.Image:
     return canvas
 
 
-def save_png(mark: Image.Image, path: Path, size: int, inset: float = 0) -> None:
+def binary_transparency(image: Image.Image, threshold: int = 128) -> Image.Image:
+    rgba = image.convert("RGBA")
+    alpha = rgba.getchannel("A").point(
+        lambda value: 255 if value >= threshold else 0
+    )
+    rgba.putalpha(alpha)
+    return rgba
+
+
+def without_outer_shadow(mark: Image.Image) -> Image.Image:
+    rgba = mark.convert("RGBA")
+    width, height = rgba.size
+    mask = Image.new("L", rgba.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle(
+        (
+            round(width * 0.064),
+            round(height * 0.033),
+            round(width * 0.960),
+            round(height * 0.945),
+        ),
+        radius=round(width * 0.205),
+        fill=255,
+    )
+    mask = mask.filter(ImageFilter.GaussianBlur(max(0.5, width * 0.0007)))
+    rgba.putalpha(Image.composite(rgba.getchannel("A"), Image.new("L", rgba.size, 0), mask))
+    return rgba
+
+
+def save_png(
+    mark: Image.Image,
+    path: Path,
+    size: int,
+    inset: float = 0,
+    hard_transparency: bool = False,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    resized(mark, size, inset).save(path, optimize=True)
+    image = resized(mark, size, inset)
+    if hard_transparency:
+        image = binary_transparency(image)
+    image.save(path, optimize=True)
+
+
+def save_favicon_ico(mark: Image.Image, path: Path) -> None:
+    sizes = [16, 24, 32, 48, 64]
+    frames = [binary_transparency(resized(mark, size)) for size in sizes]
+    frames[-1].save(
+        path,
+        format="ICO",
+        sizes=[(size, size) for size in sizes],
+        append_images=frames[:-1],
+    )
 
 
 def generate_android_icons(mark: Image.Image) -> None:
@@ -157,13 +254,27 @@ def generate_android_icons(mark: Image.Image) -> None:
 
 
 def main() -> None:
-    mark = extract_transparent_mark(Image.open(SOURCE))
-    transparent_source = resized(mark, 1254)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--reference",
+        type=Path,
+        help="Import a square reference image before regenerating all brand assets.",
+    )
+    args = parser.parse_args()
+
+    if args.reference:
+        mark = import_reference_icon(args.reference)
+        mark.save(SOURCE, optimize=True)
+    else:
+        mark = extract_transparent_mark(Image.open(SOURCE))
+
+    platform_mark = without_outer_shadow(mark)
+    transparent_source = resized(platform_mark, 1254)
     transparent_source.save(BRANDING / "todo-matrix-icon-source.png", optimize=True)
 
-    save_png(mark, BRANDING / "todo-matrix-icon-1024.png", 1024)
+    save_png(platform_mark, BRANDING / "todo-matrix-icon-1024.png", 1024)
 
-    icon_1024 = resized(mark, 1024)
+    icon_1024 = resized(platform_mark, 1024)
     icon_1024.save(
         BRANDING / "todo-matrix-icon.ico",
         format="ICO",
@@ -171,19 +282,15 @@ def main() -> None:
     )
     icon_1024.save(BRANDING / "todo-matrix-icon.icns", format="ICNS")
 
-    save_png(mark, PUBLIC / "favicon-32.png", 32)
-    save_png(mark, PUBLIC / "favicon-64.png", 64)
-    save_png(mark, PUBLIC / "apple-touch-icon.png", 180)
-    save_png(mark, PUBLIC / "icons" / "icon-192.png", 192)
-    save_png(mark, PUBLIC / "icons" / "icon-512.png", 512)
-    save_png(mark, PUBLIC / "icons" / "icon-maskable-512.png", 512, inset=0.1)
-    icon_1024.save(
-        PUBLIC / "favicon.ico",
-        format="ICO",
-        sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64)],
-    )
+    save_png(platform_mark, PUBLIC / "favicon-32.png", 32, hard_transparency=True)
+    save_png(platform_mark, PUBLIC / "favicon-64.png", 64, hard_transparency=True)
+    save_png(platform_mark, PUBLIC / "apple-touch-icon.png", 180)
+    save_png(platform_mark, PUBLIC / "icons" / "icon-192.png", 192)
+    save_png(platform_mark, PUBLIC / "icons" / "icon-512.png", 512)
+    save_png(platform_mark, PUBLIC / "icons" / "icon-maskable-512.png", 512, inset=0.1)
+    save_favicon_ico(platform_mark, PUBLIC / "favicon.ico")
 
-    generate_android_icons(mark)
+    generate_android_icons(platform_mark)
 
 
 if __name__ == "__main__":

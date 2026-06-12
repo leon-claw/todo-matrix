@@ -457,6 +457,199 @@ API_BASE_URL: 'http://127.0.0.1:3001/api'
 
 真机调试不能使用 `127.0.0.1` 访问电脑后端，需要改成局域网 IP 或已部署的 HTTPS 域名。
 
+## 多平台原生安装包发布
+
+Windows 安装包必须在 Windows 构建；macOS 和 iOS 必须在 Mac 构建。项目采用以下发布方式：
+
+1. 所有机器检出同一个 Git Tag。
+2. Windows 构建完成后创建 GitHub Draft Release，并上传 Windows 产物。
+3. Mac 构建 macOS、Android、iOS 产物，并继续上传到同一个 Draft Release。
+4. 检查产物完整后，由 Mac 将 Draft Release 正式发布。
+
+安装包只存放在 GitHub Release，不提交到 Git 仓库。本地产物统一生成到：
+
+```text
+release-artifacts/<tag>/
+```
+
+该目录已经加入 `.gitignore`。
+
+### 1. 创建统一版本 Tag
+
+在准备发布的提交上创建并推送 Tag：
+
+```powershell
+git status
+git tag -a v1.2.0 -m "Todo Matrix v1.2.0"
+git push origin v1.2.0
+```
+
+两台构建机器都必须检出同一个 Tag：
+
+```bash
+git fetch origin --tags
+git checkout v1.2.0
+```
+
+构建脚本会检查：
+
+- Tag 必须存在。
+- 当前 `HEAD` 必须正好是该 Tag 指向的提交。
+- 工作区必须没有未提交修改。
+
+### 2. Windows 构建
+
+在 Windows 机器执行：
+
+```powershell
+npm run release:build:windows -- -Tag v1.2.0
+```
+
+默认会先执行 `npm ci`，随后生成：
+
+```text
+release-artifacts/v1.2.0/windows/
+├─ todo-matrix-v1.2.0-windows-setup.exe
+├─ todo-matrix-v1.2.0-windows-portable.zip
+└─ SHA256SUMS-windows.txt
+```
+
+已经执行过 `npm ci` 时，可以跳过依赖安装：
+
+```powershell
+npm run release:build:windows -- -Tag v1.2.0 -SkipInstall
+```
+
+### 3. 创建 Draft Release 并上传 Windows 产物
+
+发布脚本直接调用 GitHub API，不依赖 `gh` CLI。先创建一个 Fine-grained personal access token，授权 `leon-claw/todo-matrix` 仓库，并赋予：
+
+```text
+Repository permissions > Contents: Read and write
+```
+
+在 PowerShell 中临时设置 Token：
+
+```powershell
+$env:GITHUB_TOKEN="github_pat_xxx"
+```
+
+创建 Draft Release 并上传 Windows 产物：
+
+```powershell
+npm run release:github -- --tag v1.2.0 --create-draft --dir release-artifacts/v1.2.0/windows
+```
+
+脚本会复用同名 Release；同名产物已存在时会先删除旧文件再上传，因此失败后可以安全重试。
+
+### 4. Mac 构建环境
+
+Mac 服务器需要安装：
+
+- Node.js 20 或更高版本
+- Xcode 和 Xcode Command Line Tools
+- Android SDK、JDK 17
+- 有效的 Apple Developer 账号及签名证书
+- Android 发布签名 keystore
+
+Android 签名通过环境变量提供：
+
+```bash
+export ANDROID_KEYSTORE_PATH="/absolute/path/todo-matrix-release.jks"
+export ANDROID_KEYSTORE_PASSWORD="your-store-password"
+export ANDROID_KEY_ALIAS="todo-matrix"
+export ANDROID_KEY_PASSWORD="your-key-password"
+```
+
+iOS 使用 Xcode 自动签名：
+
+```bash
+export IOS_TEAM_ID="YOUR_APPLE_TEAM_ID"
+export IOS_EXPORT_METHOD="app-store-connect"
+```
+
+`IOS_EXPORT_METHOD` 可根据发布方式设置为 `app-store-connect`、`ad-hoc` 或 `development`。
+
+### 5. Mac、Android、iOS 构建
+
+在 Mac 检出同一个 Tag 后执行：
+
+```bash
+npm run release:build:mac -- --tag v1.2.0
+```
+
+默认生成：
+
+```text
+release-artifacts/v1.2.0/apple-mobile/
+├─ todo-matrix-v1.2.0-macos.dmg
+├─ todo-matrix-v1.2.0-macos.zip
+├─ todo-matrix-v1.2.0-android.apk
+├─ todo-matrix-v1.2.0-android.aab
+├─ todo-matrix-v1.2.0-ios.ipa
+└─ SHA256SUMS-apple-mobile.txt
+```
+
+当前仓库尚未提交 `ios/` 原生工程。第一次在 Mac 初始化时执行：
+
+```bash
+npm run release:build:mac -- --tag v1.2.0 --init-ios
+```
+
+初始化完成后脚本会停止，不会用临时生成且尚未审核的工程发布 IPA。应检查 Xcode 中的 Bundle ID、Signing、Capabilities 和应用图标，将 `ios/` 目录提交，创建新的发布 Tag，再重新执行正式构建。正式发布不应依赖临时初始化。
+
+如果本次暂不发布 iOS：
+
+```bash
+npm run release:build:mac -- --tag v1.2.0 --skip-ios
+```
+
+已经安装过依赖时：
+
+```bash
+npm run release:build:mac -- --tag v1.2.0 --skip-install
+```
+
+### 6. 上传 Mac、Android、iOS 产物
+
+在 Mac 设置相同的 GitHub Token：
+
+```bash
+export GITHUB_TOKEN="github_pat_xxx"
+```
+
+将产物补充到 Windows 已创建的 Draft Release：
+
+```bash
+npm run release:github -- --tag v1.2.0 --create-draft --dir release-artifacts/v1.2.0/apple-mobile
+```
+
+这里继续使用 `--create-draft` 是安全的：Release 已存在时只会上传或替换产物，不会创建第二个 Release。
+
+### 7. 正式发布
+
+先在 GitHub Draft Release 页面检查所有平台文件和 SHA256 文件。确认无误后，在 Mac 执行：
+
+```bash
+npm run release:github -- --tag v1.2.0 --publish --dir release-artifacts/v1.2.0/apple-mobile
+```
+
+`--publish` 会先确保指定目录里的产物已经上传，然后把同一个 Draft Release 改为公开状态。最终只会产生一个 GitHub Release。
+
+如需指定其他仓库：
+
+```bash
+npm run release:github -- --tag v1.2.0 --create-draft --repo owner/repository --dir release-artifacts/v1.2.0/windows
+```
+
+如需使用手写 Release Notes：
+
+```bash
+npm run release:github -- --tag v1.2.0 --create-draft --notes-file RELEASE_NOTES.md --dir release-artifacts/v1.2.0/windows
+```
+
+未提供 `--notes-file` 时，首次创建 Draft Release 会使用 GitHub 自动生成的 Release Notes。
+
 ### 生产配置
 
 小程序上线前需要：

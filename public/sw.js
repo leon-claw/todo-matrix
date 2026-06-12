@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `todo-matrix-${CACHE_VERSION}`;
 const APP_INDEX = new URL('index.html', self.registration.scope).toString();
 const APP_SHELL = [
