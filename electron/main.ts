@@ -45,10 +45,6 @@ let mainWindow: BrowserWindow | null = null;
 let sessionToken: string | null = null;
 let desktopRendererRoot: string | null = null;
 
-function isSquirrelStartupEvent() {
-  return process.platform === 'win32' && process.argv.some((argument) => argument.startsWith('--squirrel-'));
-}
-
 function getSessionFilePath() {
   return path.join(app.getPath('userData'), 'desktop-session.json');
 }
@@ -311,53 +307,49 @@ async function createWindow() {
   }
 }
 
-if (isSquirrelStartupEvent()) {
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (!hasSingleInstanceLock) {
   app.quit();
 } else {
-  const hasSingleInstanceLock = app.requestSingleInstanceLock();
+  app.on('second-instance', () => {
+    if (!mainWindow) {
+      return;
+    }
 
-  if (!hasSingleInstanceLock) {
-    app.quit();
-  } else {
-    app.on('second-instance', () => {
-      if (!mainWindow) {
-        return;
-      }
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.focus();
+  });
 
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-      }
-      mainWindow.focus();
+  app.whenReady().then(async () => {
+    session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
+      callback(false);
     });
+    registerDesktopRendererProtocol();
 
-    app.whenReady().then(async () => {
-      session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
-        callback(false);
-      });
-      registerDesktopRendererProtocol();
-
-      await loadSessionToken();
-      ipcMain.handle('todo-matrix:api-request', handleApiRequest);
-      ipcMain.handle('todo-matrix:desktop-ota-ready', async () => {
-        if (shouldUseDesktopOta()) {
-          await markDesktopOtaReady(app.getPath('userData'));
-        }
-      });
-      await createWindow();
-      startDesktopOtaUpdateCheck();
-
-      app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-          void createWindow();
-          startDesktopOtaUpdateCheck();
-        }
-      });
-    });
-
-    app.on('window-all-closed', () => {
-      if (process.platform !== 'darwin') {
-        app.quit();
+    await loadSessionToken();
+    ipcMain.handle('todo-matrix:api-request', handleApiRequest);
+    ipcMain.handle('todo-matrix:desktop-ota-ready', async () => {
+      if (shouldUseDesktopOta()) {
+        await markDesktopOtaReady(app.getPath('userData'));
       }
     });
-  }
+    await createWindow();
+    startDesktopOtaUpdateCheck();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        void createWindow();
+        startDesktopOtaUpdateCheck();
+      }
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
 }

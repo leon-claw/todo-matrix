@@ -43,15 +43,23 @@ export function AppHeader({
       }}
     >
       <Stack
-        direction="row"
-        spacing={{ xs: 1, sm: 2 }}
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={{ xs: 1.25, sm: 2 }}
         sx={{
-          alignItems: 'center',
+          alignItems: { xs: 'stretch', sm: 'center' },
           justifyContent: 'space-between',
           minWidth: 0,
         }}
       >
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: 'center',
+            minWidth: 0,
+            width: { xs: '100%', sm: 'auto' },
+          }}
+        >
           <Box
             alt=""
             aria-hidden="true"
@@ -70,13 +78,32 @@ export function AppHeader({
             <Typography noWrap variant="h1">
               Todo Matrix
             </Typography>
-            <Typography color="text.secondary" noWrap variant="subtitle2">
+            <Typography
+              color="text.secondary"
+              noWrap
+              variant="subtitle2"
+              sx={{
+                '@media (max-width: 359.95px)': {
+                  display: 'none',
+                },
+              }}
+            >
               基于艾森豪威尔方法论的待办小工具
             </Typography>
           </Box>
         </Stack>
 
-        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flex: '0 0 auto' }}>
+        <Stack
+          direction="row"
+          spacing={0.75}
+          sx={{
+            alignItems: 'center',
+            display: { xs: 'grid', sm: 'flex' },
+            flex: '0 0 auto',
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'none' },
+            width: { xs: '100%', sm: 'auto' },
+          }}
+        >
           {onCreateTask ? (
             <Button
               aria-label="添加任务"
@@ -87,14 +114,13 @@ export function AppHeader({
               variant="contained"
               sx={{
                 flex: '0 0 auto',
-                minWidth: { xs: 42, sm: 96 },
-                px: { xs: 1, sm: 1.75 },
-                '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } },
+                height: { xs: 42, sm: 36.5 },
+                minWidth: { xs: 0, sm: 96 },
+                px: { xs: 1.5, sm: 1.75 },
+                width: { xs: '100%', sm: 'auto' },
               }}
             >
-              <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
-                添加任务
-              </Box>
+              添加任务
             </Button>
           ) : null}
 
@@ -111,7 +137,12 @@ export function AppHeader({
               }
               type="button"
               variant="outlined"
-              sx={{ flex: '0 0 auto', minWidth: { xs: 68, sm: 82 } }}
+              sx={{
+                flex: '0 0 auto',
+                height: { xs: 42, sm: 36.5 },
+                minWidth: { xs: 0, sm: 82 },
+                width: { xs: '100%', sm: 'auto' },
+              }}
             >
               {accountState.label}
             </Button>
@@ -130,7 +161,12 @@ export function AppHeader({
               label={accountState.label}
               size="small"
               variant={isCloudMode ? 'filled' : 'outlined'}
-              sx={{ fontWeight: 700 }}
+              sx={{
+                fontWeight: 700,
+                height: { xs: 42, sm: 32 },
+                justifyContent: 'center',
+                width: { xs: '100%', sm: 'auto' },
+              }}
             />
           )}
         </Stack>

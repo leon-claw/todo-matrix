@@ -52,20 +52,36 @@ $outputDir = Join-Path $root "release-artifacts\$Tag\windows"
 Remove-Item -LiteralPath $outputDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 
-$env:TODO_MATRIX_USE_SQUIRREL = '1'
 Invoke-Checked 'npm.cmd' @('run', 'desktop:make:proxy')
 
-$setup = Get-ChildItem (Join-Path $root 'out\make') -Recurse -File -Filter 'TodoMatrixSetup.exe' |
+$packagedApp = Get-ChildItem (Join-Path $root 'out') -Directory -Filter '*-win32-x64' |
   Select-Object -First 1
 $portable = Get-ChildItem (Join-Path $root 'out\make') -Recurse -File -Filter '*.zip' |
   Where-Object { $_.FullName -match 'zip' } |
   Select-Object -First 1
 
-if (-not $setup) {
-  throw 'TodoMatrixSetup.exe was not generated.'
+if (-not $packagedApp) {
+  throw 'The packaged Windows application was not generated.'
 }
 if (-not $portable) {
   throw 'The Windows portable ZIP was not generated.'
+}
+
+Invoke-Checked 'node' @(
+  'scripts/build-windows-nsis.mjs',
+  '--win',
+  'nsis',
+  '--x64',
+  '--prepackaged',
+  $packagedApp.FullName,
+  '--config',
+  'electron-builder.windows.cjs'
+)
+
+$setup = Get-ChildItem (Join-Path $root 'out\nsis') -File -Filter 'TodoMatrixSetup.exe' |
+  Select-Object -First 1
+if (-not $setup) {
+  throw 'TodoMatrixSetup.exe was not generated.'
 }
 
 $setupTarget = Join-Path $outputDir "todo-matrix-$Tag-windows-setup.exe"

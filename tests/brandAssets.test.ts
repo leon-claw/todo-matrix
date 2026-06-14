@@ -214,6 +214,74 @@ test('all platform icons omit the outer drop shadow', () => {
   }
 });
 
+test('Android adaptive foreground uses centered tiles without the white card', () => {
+  for (const density of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
+    const path = `android/app/src/main/res/mipmap-${density}/ic_launcher_foreground.png`;
+    const image = readRgbaPng(path);
+    const whitePixels = countPixels(
+      image,
+      (red, green, blue, alpha) =>
+        alpha > 240 && red > 245 && green > 245 && blue > 245,
+    );
+    let strayWhitePixels = 0;
+    for (let y = 0; y < image.height; y += 1) {
+      for (let x = 0; x < image.width; x += 1) {
+        const offset = (y * image.width + x) * 4;
+        if (
+          (x >= image.width / 2 || y >= image.height / 2) &&
+          image.data[offset + 3] > 240 &&
+          image.data[offset] > 245 &&
+          image.data[offset + 1] > 245 &&
+          image.data[offset + 2] > 245
+        ) {
+          strayWhitePixels += 1;
+        }
+      }
+    }
+
+    const opaqueCoordinates: Array<[number, number]> = [];
+    for (let y = 0; y < image.height; y += 1) {
+      for (let x = 0; x < image.width; x += 1) {
+        if (alphaAt(image, x, y) > 8) {
+          opaqueCoordinates.push([x, y]);
+        }
+      }
+    }
+
+    const xs = opaqueCoordinates.map(([x]) => x);
+    const left = Math.min(...xs);
+    const right = Math.max(...xs);
+    const contentCenter = (left + right) / 2;
+    const canvasCenter = (image.width - 1) / 2;
+
+    assert.ok(
+      whitePixels < image.width * image.height * 0.02,
+      `${path} must not include the full white card in the adaptive foreground`,
+    );
+    assert.equal(
+      strayWhitePixels,
+      0,
+      `${path} must not retain white card pixels around the colored tiles`,
+    );
+    assert.ok(
+      Math.abs(contentCenter - canvasCenter) <= 1,
+      `${path} foreground must be horizontally centered`,
+    );
+    assert.ok(
+      (right - left + 1) / image.width <= 0.44,
+      `${path} foreground must preserve the Android adaptive-icon safe margin`,
+    );
+  }
+});
+
+test('Android adaptive icon background is pure white', () => {
+  const background = readFileSync(
+    'android/app/src/main/res/values/ic_launcher_background.xml',
+    'utf8',
+  );
+  assert.match(background, /#FFFFFF/i);
+});
+
 test('brand and web icons use transparent outer edges', () => {
   const paths = [
     'assets/branding/todo-matrix-icon-source.png',

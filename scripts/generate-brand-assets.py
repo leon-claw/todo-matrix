@@ -6,7 +6,7 @@ Requires Pillow: python -m pip install pillow
 import argparse
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -207,6 +207,57 @@ def without_outer_shadow(mark: Image.Image) -> Image.Image:
     return rgba
 
 
+def android_adaptive_foreground(mark: Image.Image) -> Image.Image:
+    rgba = mark.convert("RGBA")
+    width, height = rgba.size
+    foreground = Image.new("RGBA", rgba.size, (0, 0, 0, 0))
+    quadrants = (
+        (0, 0, width // 2, height // 2),
+        (width // 2, 0, width, height // 2),
+        (0, height // 2, width // 2, height),
+        (width // 2, height // 2, width, height),
+    )
+
+    for quadrant in quadrants:
+        colored_mask = Image.new("L", rgba.size, 0)
+        pixels = colored_mask.load()
+        for y in range(quadrant[1], quadrant[3]):
+            for x in range(quadrant[0], quadrant[2]):
+                red, green, blue, alpha = rgba.getpixel((x, y))
+                if alpha > 32 and max(red, green, blue) - min(red, green, blue) > 45:
+                    pixels[x, y] = 255
+
+        tile_box = colored_mask.getbbox()
+        if tile_box is None:
+            raise ValueError("Could not locate an Android launcher tile.")
+
+        expanded_box = (
+            max(0, tile_box[0] - 2),
+            max(0, tile_box[1] - 2),
+            min(width, tile_box[2] + 2),
+            min(height, tile_box[3] + 2),
+        )
+        local_mask = colored_mask.crop(expanded_box)
+        flooded = local_mask.copy()
+        ImageDraw.floodfill(flooded, (0, 0), 128)
+        filled_tile = flooded.point(lambda value: 0 if value == 128 else 255)
+        tile_mask = Image.new("L", rgba.size, 0)
+        tile_mask.paste(filled_tile, expanded_box[:2])
+        tile = rgba.copy()
+        tile.putalpha(ImageChops.multiply(rgba.getchannel("A"), tile_mask))
+        foreground.alpha_composite(tile)
+
+    content_box = foreground.getchannel("A").getbbox()
+    if content_box is None:
+        raise ValueError("Android adaptive foreground is empty.")
+
+    offset_x = round((width - (content_box[2] - content_box[0])) / 2 - content_box[0])
+    offset_y = round((height - (content_box[3] - content_box[1])) / 2 - content_box[1])
+    centered = Image.new("RGBA", rgba.size, (0, 0, 0, 0))
+    centered.alpha_composite(foreground, (offset_x, offset_y))
+    return centered
+
+
 def save_png(
     mark: Image.Image,
     path: Path,
@@ -240,13 +291,14 @@ def generate_android_icons(mark: Image.Image) -> None:
         "xxhdpi": (144, 324),
         "xxxhdpi": (192, 432),
     }
+    foreground = android_adaptive_foreground(mark)
 
     for density, (legacy_size, foreground_size) in densities.items():
         directory = ANDROID_RES / f"mipmap-{density}"
         save_png(mark, directory / "ic_launcher.png", legacy_size)
         save_png(mark, directory / "ic_launcher_round.png", legacy_size)
         save_png(
-            mark,
+            foreground,
             directory / "ic_launcher_foreground.png",
             foreground_size,
             inset=0.165,
@@ -260,6 +312,11 @@ def main() -> None:
         type=Path,
         help="Import a square reference image before regenerating all brand assets.",
     )
+    parser.add_argument(
+        "--android-only",
+        action="store_true",
+        help="Regenerate only Android launcher resources.",
+    )
     args = parser.parse_args()
 
     if args.reference:
@@ -269,6 +326,10 @@ def main() -> None:
         mark = extract_transparent_mark(Image.open(SOURCE))
 
     platform_mark = without_outer_shadow(mark)
+    if args.android_only:
+        generate_android_icons(platform_mark)
+        return
+
     transparent_source = resized(platform_mark, 1254)
     transparent_source.save(BRANDING / "todo-matrix-icon-source.png", optimize=True)
 

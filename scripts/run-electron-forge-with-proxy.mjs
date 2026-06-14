@@ -2,9 +2,7 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 
 const command = process.argv[2];
-const rawArgs = process.argv.slice(3);
-const useSquirrel = rawArgs.includes('--squirrel');
-const args = rawArgs.filter((argument) => argument !== '--squirrel');
+const args = process.argv.slice(3);
 
 if (!command) {
   console.error('Usage: node scripts/run-electron-forge-with-proxy.mjs <forge-command> [...args]');
@@ -28,7 +26,6 @@ const child = spawn(
     ELECTRON_GET_USE_PROXY: process.env.ELECTRON_GET_USE_PROXY || '1',
     HTTP_PROXY: process.env.HTTP_PROXY || proxy,
     HTTPS_PROXY: process.env.HTTPS_PROXY || proxy,
-    TODO_MATRIX_USE_SQUIRREL: useSquirrel ? '1' : process.env.TODO_MATRIX_USE_SQUIRREL,
     http_proxy: process.env.http_proxy || proxy,
     https_proxy: process.env.https_proxy || proxy,
     npm_config_cache: process.env.npm_config_cache || path.resolve('.npm-cache'),

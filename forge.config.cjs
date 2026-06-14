@@ -1,5 +1,4 @@
 const { MakerDMG } = require('@electron-forge/maker-dmg');
-const { MakerSquirrel } = require('@electron-forge/maker-squirrel');
 const { MakerZIP } = require('@electron-forge/maker-zip');
 const path = require('node:path');
 
@@ -24,20 +23,8 @@ const { VitePlugin } = require('@electron-forge/plugin-vite');
 
 Module._load = loadModule;
 
-const useSquirrel = process.env.TODO_MATRIX_USE_SQUIRREL === '1';
 const appIconBase = path.join(__dirname, 'assets', 'branding', 'todo-matrix-icon');
 const makers = [
-  ...(useSquirrel
-    ? [
-        new MakerSquirrel({
-          name: 'todo_matrix',
-          noDelta: true,
-          noMsi: true,
-          setupExe: 'TodoMatrixSetup.exe',
-          setupIcon: `${appIconBase}.ico`,
-        }),
-      ]
-    : []),
   new MakerDMG({
     format: 'ULFO',
     icon: `${appIconBase}.icns`,
