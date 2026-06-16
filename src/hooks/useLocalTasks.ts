@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { sampleTasks } from '../data/sampleTasks';
-import { loadTasks, saveTasks } from '../lib/localDatabase';
+import { DEFAULT_TASK_COLOR } from '../constants/taskAppearance';
+import { clearTasks, loadTasks, saveTasks } from '../lib/localDatabase';
+import { calculateSubtaskProgress, normalizeSubtasks } from '../lib/subtasks';
+import { clampMetric, sortTasks } from '../lib/taskUtils';
 import type { MatrixTask, TaskFormValues, TaskMetrics } from '../types';
-
-const TODO_SORT_WEIGHTS = {
-  importance: 1,
-  urgency: 1,
-};
 
 type StoredTask = Partial<MatrixTask> & {
   id: string;
@@ -22,23 +19,25 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function clampMetric(value: number | undefined, fallback: number) {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return fallback;
-  }
-
-  return Math.max(0, Math.min(100, Math.round(value)));
+function normalizeColor(value: string | undefined) {
+  return value?.trim() || DEFAULT_TASK_COLOR;
 }
 
 function normalizeTask(task: StoredTask): MatrixTask {
   const timestamp = new Date().toISOString();
+  const subtasks = normalizeSubtasks(task.subtasks);
+  const autoProgress = task.autoProgress ?? false;
 
   return {
     id: task.id,
     title: task.title,
     notes: task.notes ?? '',
+    subtasks,
     importance: clampMetric(task.importance, 50),
     urgency: clampMetric(task.urgency, 50),
+    color: normalizeColor(task.color),
+    progress: autoProgress ? calculateSubtaskProgress(subtasks) : clampMetric(task.progress, 0),
+    autoProgress,
     showOnAxis: task.showOnAxis ?? true,
     completed: task.completed ?? false,
     createdAt: task.createdAt ?? timestamp,
@@ -52,28 +51,6 @@ function normalizeTasks(tasks: MatrixTask[] | null) {
   }
 
   return tasks.map((task) => normalizeTask(task as StoredTask));
-}
-
-function getTaskScore(task: MatrixTask) {
-  return (
-    task.importance * TODO_SORT_WEIGHTS.importance +
-    task.urgency * TODO_SORT_WEIGHTS.urgency
-  );
-}
-
-function sortTasks(tasks: MatrixTask[]) {
-  return [...tasks].sort((first, second) => {
-    if (first.completed !== second.completed) {
-      return Number(first.completed) - Number(second.completed);
-    }
-
-    const scoreDelta = getTaskScore(second) - getTaskScore(first);
-    if (scoreDelta !== 0) {
-      return scoreDelta;
-    }
-
-    return new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime();
-  });
 }
 
 export function useLocalTasks() {
@@ -91,7 +68,7 @@ export function useLocalTasks() {
         }
 
         const normalizedTasks = normalizeTasks(storedTasks);
-        const initialTasks = normalizedTasks ?? sampleTasks;
+        const initialTasks = normalizedTasks ?? [];
         const sortedTasks = sortTasks(initialTasks);
         setTasks(sortedTasks);
 
@@ -128,12 +105,18 @@ export function useLocalTasks() {
   const addTask = useCallback(
     (input: TaskFormValues) => {
       const timestamp = new Date().toISOString();
+      const subtasks = normalizeSubtasks(input.subtasks);
+      const autoProgress = input.autoProgress;
       const nextTask: MatrixTask = {
         id: createId(),
         title: input.title.trim(),
         notes: input.notes.trim(),
+        subtasks,
         importance: clampMetric(input.importance, 50),
         urgency: clampMetric(input.urgency, 50),
+        color: normalizeColor(input.color),
+        progress: autoProgress ? calculateSubtaskProgress(subtasks) : clampMetric(input.progress, 0),
+        autoProgress,
         showOnAxis: input.showOnAxis,
         completed: false,
         createdAt: timestamp,
@@ -148,6 +131,8 @@ export function useLocalTasks() {
   const updateTask = useCallback(
     (taskId: string, input: TaskFormValues) => {
       const timestamp = new Date().toISOString();
+      const subtasks = normalizeSubtasks(input.subtasks);
+      const autoProgress = input.autoProgress;
       commit(
         tasks.map((task) =>
           task.id === taskId
@@ -155,8 +140,12 @@ export function useLocalTasks() {
                 ...task,
                 title: input.title.trim(),
                 notes: input.notes.trim(),
+                subtasks,
                 importance: clampMetric(input.importance, task.importance),
                 urgency: clampMetric(input.urgency, task.urgency),
+                color: normalizeColor(input.color),
+                progress: autoProgress ? calculateSubtaskProgress(subtasks) : clampMetric(input.progress, task.progress),
+                autoProgress,
                 showOnAxis: input.showOnAxis,
                 updatedAt: timestamp,
               }
@@ -191,6 +180,7 @@ export function useLocalTasks() {
                 ...task,
                 importance: clampMetric(metrics.importance, task.importance),
                 urgency: clampMetric(metrics.urgency, task.urgency),
+                progress: task.autoProgress ? calculateSubtaskProgress(task.subtasks) : clampMetric(metrics.progress, task.progress),
                 updatedAt: timestamp,
               }
             : task,
@@ -221,6 +211,32 @@ export function useLocalTasks() {
     [commit, tasks],
   );
 
+  const clearCompletedTasks = useCallback(() => {
+    commit(tasks.filter((task) => !task.completed));
+  }, [commit, tasks]);
+
+  const clearLocalTasks = useCallback(async () => {
+    setTasks([]);
+    try {
+      await clearTasks();
+    } catch {
+      setStorageError('本地数据清理失败，请检查浏览器存储权限。');
+    }
+  }, []);
+
+  const replaceLocalTasks = useCallback(async (nextTasks: MatrixTask[]) => {
+    const normalizedTasks = normalizeTasks(nextTasks) ?? [];
+    const sortedTasks = sortTasks(normalizedTasks);
+    try {
+      await saveTasks(sortedTasks);
+      setTasks(sortedTasks);
+      setStorageError(null);
+    } catch {
+      setStorageError('本地数据导入失败，请检查浏览器存储空间。');
+      throw new Error('Local import failed');
+    }
+  }, []);
+
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length;
     const shownOnAxis = tasks.filter((task) => task.showOnAxis && !task.completed).length;
@@ -244,5 +260,8 @@ export function useLocalTasks() {
     updateTaskMetrics,
     toggleAxisVisibility,
     deleteTask,
+    clearCompletedTasks,
+    clearLocalTasks,
+    replaceLocalTasks,
   };
 }

@@ -1,0 +1,3 @@
+ALTER TABLE `tasks`
+  ADD COLUMN `subtasks` JSON NOT NULL DEFAULT (JSON_ARRAY()),
+  ADD COLUMN `auto_progress` BOOLEAN NOT NULL DEFAULT false;

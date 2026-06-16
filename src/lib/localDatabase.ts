@@ -100,3 +100,13 @@ export async function saveTasks(tasks: MatrixTask[]): Promise<void> {
 
   await withStore<IDBValidKey>('readwrite', (store) => store.put(record));
 }
+
+export async function clearTasks(): Promise<void> {
+  localStorage.removeItem(FALLBACK_KEY);
+
+  if (!hasIndexedDb()) {
+    return;
+  }
+
+  await withStore<undefined>('readwrite', (store) => store.delete(TASKS_KEY));
+}

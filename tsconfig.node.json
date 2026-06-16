@@ -11,5 +11,9 @@
     "strict": true,
     "noEmit": true
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "electron/**/*.ts",
+    "src/lib/otaUpdatePolicy.ts",
+    "vite.config.ts"
+  ]
 }

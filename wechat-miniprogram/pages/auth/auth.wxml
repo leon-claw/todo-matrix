@@ -1,0 +1,37 @@
+<view class="page auth-page">
+  <view class="panel auth-panel">
+    <view class="title">{{mode == 'login' ? '登录云端账号' : '注册云端账号'}}</view>
+    <view class="subtitle">登录后任务会保存到后端数据库，本地模式仍可离线使用。</view>
+
+    <view class="mode-tabs">
+      <view class="tab {{mode == 'login' ? 'active' : ''}}" data-mode="login" bindtap="setMode">登录</view>
+      <view class="tab {{mode == 'register' ? 'active' : ''}}" data-mode="register" bindtap="setMode">注册</view>
+    </view>
+
+    <view wx:if="{{error}}" class="error-box">{{error}}</view>
+
+    <view class="field">
+      <text>邮箱</text>
+      <input type="text" inputmode="email" value="{{email}}" data-field="email" bindinput="handleInput" placeholder="name@example.com" />
+    </view>
+
+    <view class="field">
+      <text>密码</text>
+      <input password value="{{password}}" data-field="password" bindinput="handleInput" placeholder="至少 8 位" />
+    </view>
+
+    <view wx:if="{{mode == 'register'}}" class="captcha-row">
+      <image class="captcha-image" src="{{captchaImage}}" mode="aspectFit"></image>
+      <button class="outline-button refresh-button" bindtap="refreshCaptcha" loading="{{isLoading}}">刷新</button>
+    </view>
+
+    <view wx:if="{{mode == 'register'}}" class="field">
+      <text>验证码</text>
+      <input value="{{captchaAnswer}}" data-field="captchaAnswer" bindinput="handleInput" placeholder="输入图片验证码" />
+    </view>
+
+    <button class="primary-button submit-button" loading="{{isLoading}}" bindtap="submit">
+      {{mode == 'login' ? '登录' : '注册并登录'}}
+    </button>
+  </view>
+</view>

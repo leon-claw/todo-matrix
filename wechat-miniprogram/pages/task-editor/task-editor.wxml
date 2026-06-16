@@ -1,0 +1,58 @@
+<view class="page editor-page">
+  <view class="panel editor-panel">
+    <view class="title">{{mode == 'edit' ? '编辑任务' : '添加任务'}}</view>
+
+    <view class="field">
+      <text>标题</text>
+      <input value="{{values.title}}" data-field="title" bindinput="handleInput" placeholder="任务标题" />
+    </view>
+
+    <view class="field">
+      <text>描述</text>
+      <textarea value="{{values.notes}}" data-field="notes" bindinput="handleInput" placeholder="可选描述" maxlength="1000"></textarea>
+    </view>
+
+    <view class="color-grid">
+      <view
+        wx:for="{{colorOptions}}"
+        wx:key="*this"
+        class="color-swatch {{values.color == item ? 'selected' : ''}}"
+        style="background-color: {{item}};"
+        data-color="{{item}}"
+        bindtap="chooseColor"
+      ></view>
+    </view>
+
+    <view class="field">
+      <text>自定义颜色</text>
+      <input value="{{values.color}}" data-field="color" bindinput="handleInput" placeholder="#1976d2" />
+    </view>
+
+    <view class="slider-line">
+      <text>重要</text>
+      <slider min="0" max="100" value="{{values.importance}}" data-field="importance" bindchange="handleSlider" activeColor="{{values.color}}" />
+      <text>{{values.importance}}</text>
+    </view>
+
+    <view class="slider-line">
+      <text>紧急</text>
+      <slider min="0" max="100" value="{{values.urgency}}" data-field="urgency" bindchange="handleSlider" activeColor="{{values.color}}" />
+      <text>{{values.urgency}}</text>
+    </view>
+
+    <view class="slider-line">
+      <text>进度</text>
+      <slider min="0" max="100" value="{{values.progress}}" data-field="progress" bindchange="handleSlider" activeColor="{{values.color}}" />
+      <text>{{values.progress}}%</text>
+    </view>
+
+    <view class="switch-row">
+      <text>显示在坐标轴</text>
+      <switch checked="{{values.showOnAxis}}" data-field="showOnAxis" bindchange="handleSwitch" />
+    </view>
+
+    <button class="primary-button submit-button" bindtap="submit">
+      {{mode == 'edit' ? '保存修改' : '添加任务'}}
+    </button>
+  </view>
+</view>

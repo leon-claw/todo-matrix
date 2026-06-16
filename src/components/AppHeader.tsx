@@ -1,33 +1,176 @@
-import { Plus } from 'lucide-react';
-import { InstallPrompt } from './InstallPrompt';
+import { Box, Button, Chip, CircularProgress, Stack, Typography } from '@mui/material';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
+import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
+import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
+import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
+import { getHeaderAccountState } from '../lib/headerAccountState';
 
 interface AppHeaderProps {
-  onCreateTask: () => void;
+  hasUser: boolean;
+  isAuthLoading: boolean;
+  isCloudMode: boolean;
+  isSyncing: boolean;
+  onCreateTask?: () => void;
+  onLogin: () => void;
 }
 
-export function AppHeader({ onCreateTask }: AppHeaderProps) {
-  return (
-    <header className="app-header">
-      <div className="brand">
-        <div className="brand-mark" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
-        <div>
-          <h1>Todo Matrix</h1>
-          <p>离线优先的本地 TODO 坐标轴</p>
-        </div>
-      </div>
+export function AppHeader({
+  hasUser,
+  isAuthLoading,
+  isCloudMode,
+  isSyncing,
+  onCreateTask,
+  onLogin,
+}: AppHeaderProps) {
+  const accountState = getHeaderAccountState({
+    hasUser,
+    isAuthLoading,
+    isCloudMode,
+    isSyncing,
+  });
 
-      <div className="status-row" aria-label="任务操作">
-        <InstallPrompt />
-        <button className="header-action-button" onClick={onCreateTask} type="button">
-          <Plus size={16} aria-hidden="true" />
-          添加任务
-        </button>
-      </div>
-    </header>
+  return (
+    <Box
+      component="header"
+      sx={{
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 2,
+        boxShadow: '0 18px 45px rgba(17, 24, 39, 0.06)',
+        mb: { xs: 2, md: 2.5 },
+        p: { xs: 1.5, sm: 2 },
+      }}
+    >
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={{ xs: 1.25, sm: 2 }}
+        sx={{
+          alignItems: { xs: 'stretch', sm: 'center' },
+          justifyContent: 'space-between',
+          minWidth: 0,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: 'center',
+            minWidth: 0,
+            width: { xs: '100%', sm: 'auto' },
+          }}
+        >
+          <Box
+            alt=""
+            aria-hidden="true"
+            component="img"
+            src={`${import.meta.env.BASE_URL}icons/icon-192.png`}
+            sx={{
+              borderRadius: 2,
+              boxShadow: '0 12px 28px rgba(17, 24, 39, 0.14)',
+              flex: '0 0 auto',
+              height: 42,
+              objectFit: 'cover',
+              width: 42,
+            }}
+          />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography noWrap variant="h1">
+              Todo Matrix
+            </Typography>
+            <Typography
+              color="text.secondary"
+              noWrap
+              variant="subtitle2"
+              sx={{
+                '@media (max-width: 359.95px)': {
+                  display: 'none',
+                },
+              }}
+            >
+              基于艾森豪威尔方法论的待办小工具
+            </Typography>
+          </Box>
+        </Stack>
+
+        <Stack
+          direction="row"
+          spacing={0.75}
+          sx={{
+            alignItems: 'center',
+            display: { xs: 'grid', sm: 'flex' },
+            flex: '0 0 auto',
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'none' },
+            width: { xs: '100%', sm: 'auto' },
+          }}
+        >
+          {onCreateTask ? (
+            <Button
+              aria-label="添加任务"
+              disableElevation
+              onClick={onCreateTask}
+              startIcon={<AddRoundedIcon />}
+              type="button"
+              variant="contained"
+              sx={{
+                flex: '0 0 auto',
+                height: { xs: 42, sm: 36.5 },
+                minWidth: { xs: 0, sm: 96 },
+                px: { xs: 1.5, sm: 1.75 },
+                width: { xs: '100%', sm: 'auto' },
+              }}
+            >
+              添加任务
+            </Button>
+          ) : null}
+
+          {accountState.kind === 'login' ? (
+            <Button
+              disabled={accountState.disabled}
+              onClick={onLogin}
+              startIcon={
+                accountState.loading ? (
+                  <CircularProgress aria-label="登录状态加载中" color="inherit" size={14} />
+                ) : (
+                  <LoginRoundedIcon />
+                )
+              }
+              type="button"
+              variant="outlined"
+              sx={{
+                flex: '0 0 auto',
+                height: { xs: 42, sm: 36.5 },
+                minWidth: { xs: 0, sm: 82 },
+                width: { xs: '100%', sm: 'auto' },
+              }}
+            >
+              {accountState.label}
+            </Button>
+          ) : (
+            <Chip
+              color={isCloudMode ? 'primary' : 'default'}
+              icon={
+                accountState.loading ? (
+                  <CircularProgress aria-label="同步中" color="inherit" size={14} />
+                ) : isCloudMode ? (
+                  <CloudDoneRoundedIcon />
+                ) : (
+                  <StorageRoundedIcon />
+                )
+              }
+              label={accountState.label}
+              size="small"
+              variant={isCloudMode ? 'filled' : 'outlined'}
+              sx={{
+                fontWeight: 700,
+                height: { xs: 42, sm: 32 },
+                justifyContent: 'center',
+                width: { xs: '100%', sm: 'auto' },
+              }}
+            />
+          )}
+        </Stack>
+      </Stack>
+    </Box>
   );
 }
