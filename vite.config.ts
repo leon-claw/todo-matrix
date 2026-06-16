@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
   const nativeVersion = process.env.TODO_MATRIX_NATIVE_VERSION || packageJson.version;
 
   return {
-    base: isAndroid ? './' : mode === 'production' ? '/app/todo-matrix/' : '/',
+    base: isAndroid ? './' : mode === 'production' ? '/app/' : '/',
     define: {
       __TODO_MATRIX_API_BASE_URL__: JSON.stringify(usesProductionApi ? PRODUCTION_API_BASE_URL : ''),
       __TODO_MATRIX_NATIVE_VERSION__: JSON.stringify(nativeVersion),

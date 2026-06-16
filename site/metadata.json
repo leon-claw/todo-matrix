@@ -1,0 +1,6 @@
+{
+  "name": "Todo Matrix",
+  "description": "基于重要紧急十字维度分析的极轻现代优先级待办决策系统首页与测试画布",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

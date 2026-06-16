@@ -196,3 +196,78 @@ gh release view <tag> --repo leon-claw/todo-matrix --json isDraft,isImmutable
 # 列出所有 assets
 gh release view <tag> --repo leon-claw/todo-matrix --json assets
 ```
+
+---
+
+## 根首页与主应用分离部署架构
+
+当前域名规划为同域名、不同路径的两套前端：
+
+- `https://todo-matrix.jianghong.site/`：Todo Matrix 首页，来自 `site` 的独立构建产物。
+- `https://todo-matrix.jianghong.site/app/`：Todo Matrix 主应用工作台，来自仓库根目录主应用的构建产物。
+- `https://todo-matrix.jianghong.site/api/`：后端 API 反向代理入口。
+- `https://todo-matrix.jianghong.site/ota/`：Android / Windows OTA 静态资源入口。
+
+这样部署的目标是：修改首页时只替换首页静态目录，不重新发布主应用；修改主应用时只替换 `/app/` 静态目录，不覆盖首页。
+
+推荐服务器目录结构：
+
+```text
+/var/www/todo-matrix-site/
+├── index.html
+└── assets/
+
+/var/www/todo-matrix-app/
+├── index.html
+├── assets/
+├── icons/
+├── manifest.webmanifest
+└── sw.js
+
+/var/www/todo-matrix-ota/
+├── android/
+└── windows/
+```
+
+推荐 Nginx 路径分流：
+
+```nginx
+server {
+  listen 443 ssl http2;
+  server_name todo-matrix.jianghong.site;
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:3001/api/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location /app/ {
+    alias /var/www/todo-matrix-app/;
+    try_files $uri $uri/ /app/index.html;
+  }
+
+  location /ota/ {
+    alias /var/www/todo-matrix-ota/;
+    try_files $uri =404;
+  }
+
+  location / {
+    root /var/www/todo-matrix-site;
+    try_files $uri $uri/ /index.html;
+  }
+}
+```
+
+构建与上传职责建议：
+
+- 首页构建产物只上传到 `/var/www/todo-matrix-site/`。
+- 主应用构建产物只上传到 `/var/www/todo-matrix-app/`。
+- OTA 产物只上传到 `/var/www/todo-matrix-ota/`。
+- 不要把首页的 `assets/` 和主应用的 `assets/` 放在同一个物理目录，避免同名文件或缓存策略互相影响。
+- 首页中的“开始使用”“应用矩阵 Todo Matrix”“PWA / Web”入口应跳转到 `/app/`。
+- 主应用生产构建需要使用 `/app/` 作为前端资源 base，Web 端 API 默认走同域 `/api/`。
+
+后续部署 Agent 只需要实现构建和上传流程，不需要再改变上述路径约定。
