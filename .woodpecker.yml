@@ -1,0 +1,39 @@
+when:
+  event: push
+  branch: main
+
+steps:
+  frontend-build:
+    image: node:20
+    commands:
+      - npm ci
+      - npm run build -- --mode production
+    when:
+      path:
+        include: [ 'src/**', 'public/**', 'vite.config.*', 'package.json', 'index.html' ]
+
+  frontend-deploy:
+    image: alpine:3.20
+    commands:
+      - apk add --no-cache rsync
+      - rsync -a --delete dist/ /www/todo-matrix/app/
+    volumes:
+      - /Users/leon/www:/www
+    when:
+      status: success
+      path:
+        include: [ 'src/**', 'public/**', 'vite.config.*', 'package.json', 'index.html' ]
+
+  server-deploy:
+    image: alpine:3.20
+    commands:
+      - apk add --no-cache rsync openssh-client
+      - rsync -a --delete --exclude node_modules server/ /server/
+      - cd /server && npm ci --production 2>/dev/null || true
+    volumes:
+      - /Users/leon/www:/www
+      - /Users/leon/www/todo-matrix/server:/server
+    when:
+      status: success
+      path:
+        include: [ 'server/**', 'prisma/**', 'package.json' ]
