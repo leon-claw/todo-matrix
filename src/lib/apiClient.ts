@@ -4,7 +4,7 @@ const configuredGlobalApiBase =
   typeof __TODO_MATRIX_API_BASE_URL__ === 'undefined' ? '' : __TODO_MATRIX_API_BASE_URL__;
 const configuredApiBase = (configuredGlobalApiBase || import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
-export const API_BASE = configuredApiBase;
+export const API_BASE = configuredApiBase || (import.meta.env.PROD ? __TODO_MATRIX_API_BASE_FALLBACK__ : '');
 
 const NETWORK_STATUS_EVENT = 'todo-matrix:network-status';
 const MOBILE_SESSION_TOKEN_KEY = 'todo-matrix:mobile-session-token';
