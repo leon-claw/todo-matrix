@@ -11,15 +11,18 @@ steps:
       - npm run build -- --mode production
     when:
       path:
-        include: [ 'src/**', 'public/**', 'vite.config.*', 'package.json', 'index.html' ]
+        include: [ 'src/**', 'public/**', 'prisma/**', 'vite.config.*', 'package.json', 'index.html' ]
 
   frontend-deploy:
     image: alpine:3.20
     commands:
-      - apk add --no-cache rsync
-      - rsync -a --delete dist/ /www/todo-matrix/app/
-    volumes:
-      - /Users/leon/www:/www
+      - apk add --no-cache rsync openssh-client
+      - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+      - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+      - ssh-keyscan -H host.docker.internal >> ~/.ssh/known_hosts 2>/dev/null
+      - rsync -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" -a --delete dist/ leon@host.docker.internal:/opt/homebrew/etc/nginx/html/todo-matrix/app/
+    secrets:
+      - ssh_private_key
     when:
       status: success
       path:
