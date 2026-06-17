@@ -18,7 +18,7 @@ steps:
     commands:
       - apk add --no-cache rsync openssh-client
       - mkdir -p ~/.ssh && chmod 700 ~/.ssh
-      - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+      - echo "$SSH_PRIVATE_KEY" | base64 -d > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
       - ssh-keyscan -H host.docker.internal >> ~/.ssh/known_hosts 2>/dev/null
       - rsync -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" -a --delete dist/ leon@host.docker.internal:/opt/homebrew/etc/nginx/html/todo-matrix/app/
     secrets:
