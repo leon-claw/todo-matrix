@@ -2,7 +2,7 @@ import { mkdir, readdir, readFile, rm, stat, writeFile, copyFile } from 'node:fs
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const DEFAULT_API_BASE_URL = 'https://web.jianghong.site/app/todo-matrix/api';
+const DEFAULT_API_BASE_URL = 'https://todo-matrix.jianghong.site/api';
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceDir = path.join(rootDir, 'wechat-miniprogram');
 const distDir = path.join(sourceDir, 'dist');

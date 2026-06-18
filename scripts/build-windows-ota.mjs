@@ -89,7 +89,7 @@ const version = args.version || defaultVersion();
 const nativeVersion = args['native-version'] || packageJson.version;
 const minNativeVersion = args['min-native-version'] || nativeVersion;
 const outputDir = path.resolve(rootDir, args['output-dir'] || path.join('ota', 'windows'));
-const baseUrl = (args['base-url'] || 'https://web.jianghong.site/app/todo-matrix/ota/windows').replace(/\/$/, '');
+const baseUrl = (args['base-url'] || 'https://todo-matrix.jianghong.site/ota/windows').replace(/\/$/, '');
 const releaseNotes = args['release-notes'] || 'Silent Web renderer update';
 
 const buildDir = path.join(rootDir, '.vite', 'desktop-ota-renderer');

@@ -89,7 +89,7 @@ const version = args.version || defaultVersion();
 const nativeVersion = args['native-version'] || packageJson.version;
 const minNativeVersion = args['min-native-version'] || nativeVersion;
 const outputDir = path.resolve(rootDir, args['output-dir'] || path.join('ota', 'android'));
-const baseUrl = (args['base-url'] || 'https://web.jianghong.site/app/todo-matrix/ota/android').replace(/\/$/, '');
+const baseUrl = (args['base-url'] || 'https://todo-matrix.jianghong.site/ota/android').replace(/\/$/, '');
 const manifestUrl = args['manifest-url'] || `${baseUrl}/manifest.json`;
 const releaseNotes = args['release-notes'] || '静默更新 Web 资源';
 

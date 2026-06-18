@@ -7,7 +7,7 @@ import { pathToFileURL } from 'node:url';
 import { markDesktopOtaReady, prepareDesktopRenderer, runDesktopOtaUpdateCheck } from './desktopOta';
 
 const DEVELOPMENT_API_BASE = 'http://127.0.0.1:3001';
-const PRODUCTION_API_BASE = 'https://web.jianghong.site/app/todo-matrix';
+const PRODUCTION_API_BASE = 'https://todo-matrix.jianghong.site';
 const DEFAULT_API_BASE = MAIN_WINDOW_VITE_DEV_SERVER_URL ? DEVELOPMENT_API_BASE : PRODUCTION_API_BASE;
 const DESKTOP_API_BASE = (process.env.TODO_MATRIX_DESKTOP_API_BASE || DEFAULT_API_BASE).replace(/\/+$/, '');
 const DEFAULT_DESKTOP_OTA_MANIFEST_URL = `${PRODUCTION_API_BASE}/ota/windows/manifest.json`;

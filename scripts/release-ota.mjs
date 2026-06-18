@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const defaultBaseUrl = 'https://web.jianghong.site/app/todo-matrix/ota';
+const defaultBaseUrl = 'https://todo-matrix.jianghong.site/ota';
 const defaultChannels = ['android', 'windows'];
 
 function parseArgs(argv) {
