@@ -1,0 +1,17 @@
+{
+  "name": "Todo Matrix",
+  "short_name": "Todo Matrix",
+  "description": "基于艾森豪威尔矩阵的待办优先级工具",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
