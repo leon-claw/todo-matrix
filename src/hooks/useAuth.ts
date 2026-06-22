@@ -28,7 +28,7 @@ interface AuthResponse {
   user: CurrentUser;
 }
 
-export function useAuth() {
+export function useAuth(serverApiBase: string) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [hasStoredCloudSession, setHasStoredCloudSession] = useState(() => hasClientSessionHint());
@@ -55,8 +55,10 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
+    setUser(null);
+    setHasStoredCloudSession(hasClientSessionHint());
     void refreshUser();
-  }, [refreshUser]);
+  }, [refreshUser, serverApiBase]);
 
   const login = useCallback(async (payload: AuthPayload) => {
     const response = await apiRequest<AuthResponse>('/api/auth/login', {

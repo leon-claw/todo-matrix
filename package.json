@@ -11,6 +11,7 @@
     "dev:client": "vite --host 127.0.0.1 --configLoader runner",
     "dev:prod-api": "vite --host 127.0.0.1 --mode prod-api --strictPort --configLoader runner",
     "dev:server": "tsx watch server/src/index.ts",
+    "start:private": "prisma migrate deploy && node --import tsx server/src/index.ts",
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "build": "tsc -b && vite build --configLoader runner",
     "build:android:ota": "node scripts/build-android-ota.mjs",

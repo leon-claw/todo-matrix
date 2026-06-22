@@ -33,6 +33,7 @@ import { useAuth } from './hooks/useAuth';
 import { useCloudTasks } from './hooks/useCloudTasks';
 import { useLocalTasks } from './hooks/useLocalTasks';
 import { useAppRoute } from './hooks/useAppRoute';
+import { useServerConfig } from './hooks/useServerConfig';
 import { ApiError } from './lib/apiClient';
 import { APP_RELEASES_URL } from './lib/appDownloads';
 import { getPrimaryPage } from './lib/appRouter';
@@ -46,6 +47,7 @@ const taskEditorFormId = 'task-editor-form';
 const networkStatusEventName = 'todo-matrix:network-status';
 
 export function App() {
+  const { serverConfig, setServerConfig } = useServerConfig();
   const {
     authError,
     changePassword,
@@ -56,7 +58,7 @@ export function App() {
     register,
     setAuthError,
     user,
-  } = useAuth();
+  } = useAuth(serverConfig.apiBaseUrl);
   const localStore = useLocalTasks();
   const [localDataResolved, setLocalDataResolved] = useState(false);
   const migrationRequired = Boolean(user && localStore.tasks.length > 0 && !localDataResolved);
@@ -430,6 +432,7 @@ export function App() {
           }}
           onImportTasks={handleImportTasks}
           stats={activeStore.stats}
+          serverConfig={serverConfig}
           tasks={activeStore.tasks}
           user={user}
         />
@@ -455,7 +458,17 @@ export function App() {
           <CloseRoundedIcon fontSize="small" />
         </IconButton>
         <DialogContent sx={{ p: { xs: 2.5, sm: 3 } }}>
-          <AuthPanel error={authError} isLoading={isAuthLoading} onLogin={handleLogin} onRegister={handleRegister} />
+          <AuthPanel
+            error={authError}
+            isLoading={isAuthLoading}
+            onLogin={handleLogin}
+            onRegister={handleRegister}
+            onServerConfigChange={(nextServerConfig) => {
+              setAuthError(null);
+              return setServerConfig(nextServerConfig);
+            }}
+            serverConfig={serverConfig}
+          />
         </DialogContent>
       </Dialog>
 

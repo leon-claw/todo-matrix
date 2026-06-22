@@ -30,6 +30,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 interface DesktopApiRequest {
+  apiBaseUrl?: string;
   url: string;
   method?: string;
   headers?: Record<string, string>;
@@ -41,8 +42,12 @@ interface StoredSession {
   savedAt: string;
 }
 
+interface StoredSessionCollection {
+  sessions: Record<string, StoredSession>;
+}
+
 let mainWindow: BrowserWindow | null = null;
-let sessionToken: string | null = null;
+const sessionTokens = new Map<string, string>();
 let desktopRendererRoot: string | null = null;
 
 function getSessionFilePath() {
@@ -55,36 +60,72 @@ async function loadSessionToken() {
   }
 
   try {
-    const stored = JSON.parse(await readFile(getSessionFilePath(), 'utf8')) as StoredSession;
-    sessionToken = safeStorage.decryptString(Buffer.from(stored.encryptedToken, 'base64'));
+    const stored = JSON.parse(await readFile(getSessionFilePath(), 'utf8')) as Partial<
+      StoredSession & StoredSessionCollection
+    >;
+    sessionTokens.clear();
+
+    if (stored.sessions) {
+      for (const [apiBaseUrl, session] of Object.entries(stored.sessions)) {
+        sessionTokens.set(apiBaseUrl, safeStorage.decryptString(Buffer.from(session.encryptedToken, 'base64')));
+      }
+      return;
+    }
+
+    if (stored.encryptedToken) {
+      const token = safeStorage.decryptString(Buffer.from(stored.encryptedToken, 'base64'));
+      sessionTokens.set(DESKTOP_API_BASE, token);
+      sessionTokens.set(normalizeApiBase(`${DESKTOP_API_BASE}/api`), token);
+    }
   } catch {
-    sessionToken = null;
+    sessionTokens.clear();
   }
 }
 
-async function saveSessionToken(token: string) {
-  sessionToken = token;
-
+async function writeSessionTokens() {
   if (!safeStorage.isEncryptionAvailable()) {
     return;
   }
 
-  const encryptedToken = safeStorage.encryptString(token).toString('base64');
+  const sessions: Record<string, StoredSession> = {};
+  for (const [apiBaseUrl, token] of sessionTokens.entries()) {
+    sessions[apiBaseUrl] = {
+      encryptedToken: safeStorage.encryptString(token).toString('base64'),
+      savedAt: new Date().toISOString(),
+    };
+  }
+
   const sessionFilePath = getSessionFilePath();
   await mkdir(path.dirname(sessionFilePath), { recursive: true });
-  await writeFile(
-    sessionFilePath,
-    JSON.stringify({ encryptedToken, savedAt: new Date().toISOString() } satisfies StoredSession),
-    'utf8',
-  );
+  await writeFile(sessionFilePath, JSON.stringify({ sessions } satisfies StoredSessionCollection), 'utf8');
 }
 
-async function clearSessionToken() {
-  sessionToken = null;
-  await unlink(getSessionFilePath()).catch(() => undefined);
+async function saveSessionToken(apiBaseUrl: string, token: string) {
+  sessionTokens.set(apiBaseUrl, token);
+  await writeSessionTokens();
 }
 
-function readApiPath(input: string) {
+async function clearSessionToken(apiBaseUrl: string) {
+  sessionTokens.delete(apiBaseUrl);
+  if (sessionTokens.size === 0) {
+    await unlink(getSessionFilePath()).catch(() => undefined);
+    return;
+  }
+
+  await writeSessionTokens();
+}
+
+function normalizeApiBase(input: string | undefined) {
+  const rawValue = (input || DESKTOP_API_BASE).trim().replace(/\/+$/, '');
+  const url = new URL(rawValue);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('Invalid API base URL');
+  }
+
+  return url.toString().replace(/\/$/, '');
+}
+
+function readApiPath(input: string, apiBaseUrl: string) {
   if (typeof input !== 'string' || input.trim() === '') {
     throw new Error('Invalid API request URL');
   }
@@ -92,13 +133,13 @@ function readApiPath(input: string) {
   let apiPath: string;
 
   if (/^https?:\/\//i.test(input)) {
-    const apiBaseUrl = new URL(DESKTOP_API_BASE);
+    const apiBase = new URL(apiBaseUrl);
     const requestUrl = new URL(input);
-    if (requestUrl.origin !== apiBaseUrl.origin || !requestUrl.pathname.startsWith(apiBaseUrl.pathname)) {
+    if (requestUrl.origin !== apiBase.origin || !requestUrl.pathname.startsWith(apiBase.pathname)) {
       throw new Error('External API origins are not allowed');
     }
 
-    apiPath = requestUrl.pathname.slice(apiBaseUrl.pathname.length) + requestUrl.search;
+    apiPath = `${apiBase.pathname}${requestUrl.pathname.slice(apiBase.pathname.length)}${requestUrl.search}`;
   } else {
     apiPath = input.startsWith('/') ? input : `/${input}`;
   }
@@ -108,6 +149,14 @@ function readApiPath(input: string) {
   }
 
   return apiPath;
+}
+
+function buildApiRequestUrl(apiBaseUrl: string, apiPath: string) {
+  if (apiBaseUrl.endsWith('/api') && apiPath.startsWith('/api/')) {
+    return `${apiBaseUrl}${apiPath.slice('/api'.length)}`;
+  }
+
+  return `${apiBaseUrl}${apiPath}`;
 }
 
 function readHeader(headers: Record<string, string> | undefined, name: string) {
@@ -152,8 +201,9 @@ async function handleApiRequest(_event: Electron.IpcMainInvokeEvent, request: De
     throw new Error(`HTTP method is not allowed: ${method}`);
   }
 
-  const apiPath = readApiPath(request.url);
-  const requestUrl = `${DESKTOP_API_BASE}${apiPath}`;
+  const apiBaseUrl = normalizeApiBase(request.apiBaseUrl);
+  const apiPath = readApiPath(request.url, apiBaseUrl);
+  const requestUrl = buildApiRequestUrl(apiBaseUrl, apiPath);
   const headers: Record<string, string> = {
     Accept: 'application/json',
   };
@@ -164,6 +214,7 @@ async function handleApiRequest(_event: Electron.IpcMainInvokeEvent, request: De
     body = typeof request.body === 'string' ? request.body : JSON.stringify(request.body);
   }
 
+  const sessionToken = sessionTokens.get(apiBaseUrl);
   if (sessionToken) {
     headers.Authorization = `Bearer ${sessionToken}`;
   }
@@ -179,7 +230,7 @@ async function handleApiRequest(_event: Electron.IpcMainInvokeEvent, request: De
     };
   } finally {
     if (method === 'POST' && apiPath === '/api/auth/logout') {
-      await clearSessionToken();
+      await clearSessionToken(apiBaseUrl);
     }
   }
 
@@ -192,7 +243,7 @@ async function handleApiRequest(_event: Electron.IpcMainInvokeEvent, request: De
     typeof payload === 'object' &&
     typeof (payload as { token?: unknown }).token === 'string'
   ) {
-    await saveSessionToken((payload as { token: string }).token);
+    await saveSessionToken(apiBaseUrl, (payload as { token: string }).token);
   }
 
   return {

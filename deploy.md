@@ -271,3 +271,91 @@ server {
 - 主应用生产构建需要使用 `/app/` 作为前端资源 base，Web 端 API 默认走同域 `/api/`。
 
 后续部署 Agent 只需要实现构建和上传流程，不需要再改变上述路径约定。
+
+---
+
+## 私有化部署与自定义域名
+
+客户端支持两种服务器模式：
+
+- 默认云接口：`https://todo-matrix.jianghong.site/api/`
+- 自定义服务器：用户在登录/注册弹窗中输入自己的服务器地址
+
+自定义服务器可以填写站点根路径或 API 路径，客户端会自动规范为 `/api` 结尾，并调用：
+
+```text
+GET /api/health
+```
+
+只要该接口返回 2xx，即认为服务器可用。
+
+### Docker 一键私有化
+
+仓库提供独立的私有化 compose 文件，不影响本地开发用的 `docker-compose.yml`。
+
+```bash
+docker compose -f docker-compose.private.yml up -d --build
+```
+
+默认服务：
+
+- 前端应用：`http://127.0.0.1:3001/`
+- API 健康检查：`http://127.0.0.1:3001/api/health`
+- MySQL 数据卷：`todo_matrix_private_mysql`
+
+### 推荐反向代理
+
+公网部署时建议只暴露 HTTPS 域名，不直接暴露数据库端口。
+
+```nginx
+server {
+  listen 443 ssl http2;
+  server_name todo.example.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+部署完成后，客户端自定义服务器填写：
+
+```text
+https://todo.example.com
+```
+
+客户端会使用：
+
+```text
+https://todo.example.com/api
+```
+
+### 私有化维护
+
+```bash
+# 查看状态
+docker compose -f docker-compose.private.yml ps
+
+# 查看日志
+docker compose -f docker-compose.private.yml logs -f app
+
+# 更新当前代码并重建
+docker compose -f docker-compose.private.yml up -d --build
+
+# 数据库备份
+docker compose -f docker-compose.private.yml exec mysql \
+  mysqldump -utodo_matrix -ptodo_matrix_private todo_matrix > todo_matrix_backup.sql
+```
+
+生产环境建议：
+
+- 修改 `docker-compose.private.yml` 中的 MySQL 密码。
+- 使用 HTTPS。
+- 如果允许官方 Web 客户端连接私有服务器，保留或配置 `CORS_ORIGINS=https://todo-matrix.jianghong.site`。
+- 将 MySQL volume 纳入定期备份。
+- 升级前先备份数据库。
+- 确认 `/api/health` 可访问后，再让客户端切换到自定义服务器。

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 interface DesktopApiRequest {
+  apiBaseUrl?: string;
   url: string;
   method?: string;
   headers?: Record<string, string>;

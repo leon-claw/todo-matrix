@@ -1,8 +1,10 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { Prisma } from '@prisma/client';
+import path from 'node:path';
 import { attachUser, clearSessionCookie, createSession, hashPassword, requireAuth, userResponse, verifyPassword } from './auth';
 import { createCaptchaChallenge, readCaptchaImage, verifyCaptchaChallenge } from './captcha';
+import { config } from './config';
 import { prisma } from './prisma';
 import {
   authSchema,
@@ -18,6 +20,7 @@ import { calculateSubtaskProgress, normalizeSubtasks, toTaskCreateInput, toTaskR
 export const app = express();
 
 const allowedCorsOrigins = new Set([
+  'https://todo-matrix.jianghong.site',
   'https://todo-matrix.localhost',
   ...(process.env.CORS_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? []),
 ]);
@@ -332,3 +335,12 @@ app.post('/api/migration/replace-tasks', requireAuth, async (req, res) => {
     handleError(error, res);
   }
 });
+
+if (config.webRoot) {
+  const webRoot = path.resolve(config.webRoot);
+
+  app.use(express.static(webRoot, { index: false }));
+  app.get(/^(?!\/api(?:\/|$)).*/, (_req, res) => {
+    res.sendFile(path.join(webRoot, 'index.html'));
+  });
+}

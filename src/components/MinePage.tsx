@@ -25,6 +25,7 @@ import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import CleaningServicesRoundedIcon from '@mui/icons-material/CleaningServicesRounded';
 import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import DnsRoundedIcon from '@mui/icons-material/DnsRounded';
 import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
 import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
 import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
@@ -39,6 +40,7 @@ import { InstallPrompt } from './InstallPrompt';
 import { createTaskBackupFile, parseTaskBackup, saveTaskBackupFile } from '../lib/taskBackup';
 import type { MatrixTask } from '../types';
 import type { CurrentUser } from '../types/auth';
+import type { ServerConfig } from '../lib/serverConfig';
 
 interface MinePageProps {
   isCloudMode: boolean;
@@ -49,6 +51,7 @@ interface MinePageProps {
   onLogin: () => void;
   onLogout: () => void;
   onOpenReleases: () => void;
+  serverConfig: ServerConfig;
   stats: {
     active: number;
     completed: number;
@@ -94,6 +97,7 @@ export function MinePage({
   onLogin,
   onLogout,
   onOpenReleases,
+  serverConfig,
   stats,
   tasks,
   user,
@@ -228,6 +232,12 @@ export function MinePage({
               icon={CloudDoneRoundedIcon}
               rightText={isCloudMode ? '云端模式' : '本地模式'}
               title="数据模式"
+            />
+            <SettingsRow
+              disabled
+              icon={DnsRoundedIcon}
+              rightText={serverConfig.mode === 'custom' ? '自定义服务器' : '默认云接口'}
+              title="服务器"
             />
             <SettingsRow
               icon={FileDownloadRoundedIcon}

@@ -1,15 +1,9 @@
 import { CapacitorHttp } from '@capacitor/core';
+import { createClientSessionStorageKeys, getActiveApiBase, normalizeServerApiBase } from './serverConfig';
 
-const configuredGlobalApiBase =
-  typeof __TODO_MATRIX_API_BASE_URL__ === 'undefined' ? '' : __TODO_MATRIX_API_BASE_URL__;
-const configuredApiBase = (configuredGlobalApiBase || import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-
-export const API_BASE = configuredApiBase || (import.meta.env.PROD ? __TODO_MATRIX_API_BASE_FALLBACK__ : '');
+export const API_BASE = getActiveApiBase();
 
 const NETWORK_STATUS_EVENT = 'todo-matrix:network-status';
-const MOBILE_SESSION_TOKEN_KEY = 'todo-matrix:mobile-session-token';
-const CLIENT_SESSION_HINT_KEY = 'todo-matrix:client-session-present';
-
 function isCapacitorNative() {
   if (typeof window === 'undefined') {
     return false;
@@ -27,28 +21,29 @@ function isCapacitorNative() {
   return Boolean(capacitor.platform && capacitor.platform !== 'web');
 }
 
-function isCrossOriginApiBase() {
-  if (typeof window === 'undefined' || !API_BASE || !/^https?:\/\//i.test(API_BASE)) {
+function isCrossOriginApiBase(apiBaseUrl = getActiveApiBase()) {
+  if (typeof window === 'undefined' || !apiBaseUrl || !/^https?:\/\//i.test(apiBaseUrl)) {
     return false;
   }
 
   try {
-    return new URL(API_BASE).origin !== window.location.origin;
+    return new URL(apiBaseUrl).origin !== window.location.origin;
   } catch {
     return false;
   }
 }
 
-function shouldUseClientSessionToken() {
-  return isCapacitorNative() || isCrossOriginApiBase();
+function shouldUseClientSessionToken(apiBaseUrl = getActiveApiBase()) {
+  return isCapacitorNative() || isCrossOriginApiBase(apiBaseUrl);
 }
 
-function readMobileSessionToken() {
-  if (!shouldUseClientSessionToken()) {
+function readMobileSessionToken(apiBaseUrl = getActiveApiBase()) {
+  if (!shouldUseClientSessionToken(apiBaseUrl)) {
     return null;
   }
 
-  return localStorage.getItem(MOBILE_SESSION_TOKEN_KEY);
+  const keys = createClientSessionStorageKeys(apiBaseUrl);
+  return localStorage.getItem(keys.token) || localStorage.getItem(keys.legacyToken);
 }
 
 export function hasClientSessionHint() {
@@ -56,8 +51,12 @@ export function hasClientSessionHint() {
     return false;
   }
 
+  const keys = createClientSessionStorageKeys(getActiveApiBase());
   return Boolean(
-    localStorage.getItem(MOBILE_SESSION_TOKEN_KEY) || localStorage.getItem(CLIENT_SESSION_HINT_KEY),
+    localStorage.getItem(keys.token) ||
+      localStorage.getItem(keys.hint) ||
+      localStorage.getItem(keys.legacyToken) ||
+      localStorage.getItem(keys.legacyHint),
   );
 }
 
@@ -66,7 +65,7 @@ export function markClientSessionPresent() {
     return;
   }
 
-  localStorage.setItem(CLIENT_SESSION_HINT_KEY, '1');
+  localStorage.setItem(createClientSessionStorageKeys(getActiveApiBase()).hint, '1');
 }
 
 export function saveMobileSessionToken(token: string | null | undefined) {
@@ -75,11 +74,12 @@ export function saveMobileSessionToken(token: string | null | undefined) {
   }
 
   markClientSessionPresent();
-  if (!shouldUseClientSessionToken()) {
+  const apiBaseUrl = getActiveApiBase();
+  if (!shouldUseClientSessionToken(apiBaseUrl)) {
     return;
   }
 
-  localStorage.setItem(MOBILE_SESSION_TOKEN_KEY, token);
+  localStorage.setItem(createClientSessionStorageKeys(apiBaseUrl).token, token);
 }
 
 export function clearMobileSessionToken() {
@@ -87,8 +87,11 @@ export function clearMobileSessionToken() {
     return;
   }
 
-  localStorage.removeItem(MOBILE_SESSION_TOKEN_KEY);
-  localStorage.removeItem(CLIENT_SESSION_HINT_KEY);
+  const keys = createClientSessionStorageKeys(getActiveApiBase());
+  localStorage.removeItem(keys.token);
+  localStorage.removeItem(keys.hint);
+  localStorage.removeItem(keys.legacyToken);
+  localStorage.removeItem(keys.legacyHint);
 }
 
 function emitNetworkStatus(online: boolean) {
@@ -110,21 +113,21 @@ function readErrorMessage(payload: unknown, fallback: string) {
   return fallback;
 }
 
-function buildApiUrl(url: string) {
+function buildApiUrl(url: string, apiBaseUrl = getActiveApiBase()) {
   if (/^https?:\/\//.test(url)) {
     return url;
   }
 
-  if (!API_BASE) {
+  if (!apiBaseUrl) {
     return url;
   }
 
   const apiPath = url.startsWith('/') ? url : `/${url}`;
-  if (API_BASE.endsWith('/api') && apiPath.startsWith('/api/')) {
-    return `${API_BASE}${apiPath.slice('/api'.length)}`;
+  if (apiBaseUrl.endsWith('/api') && apiPath.startsWith('/api/')) {
+    return `${apiBaseUrl}${apiPath.slice('/api'.length)}`;
   }
 
-  return `${API_BASE}${apiPath}`;
+  return `${apiBaseUrl}${apiPath}`;
 }
 
 export class ApiError extends Error {
@@ -138,7 +141,9 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
+  apiBaseUrl?: string;
   body?: unknown;
+  skipAuth?: boolean;
 };
 
 function normalizeHeaders(headers: HeadersInit | undefined) {
@@ -158,6 +163,7 @@ async function desktopApiRequest<T>(url: string, options: RequestOptions) {
   const response = await bridge
     .apiRequest<T>({
       body: options.body,
+      apiBaseUrl: options.apiBaseUrl ?? getActiveApiBase(),
       headers: normalizeHeaders(options.headers),
       method: options.method,
       url,
@@ -181,7 +187,8 @@ async function desktopApiRequest<T>(url: string, options: RequestOptions) {
 }
 
 async function mobileApiRequest<T>(url: string, options: RequestOptions) {
-  const mobileSessionToken = readMobileSessionToken();
+  const apiBaseUrl = options.apiBaseUrl ?? getActiveApiBase();
+  const mobileSessionToken = options.skipAuth ? null : readMobileSessionToken(apiBaseUrl);
   const headers = {
     ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
     ...(mobileSessionToken ? { Authorization: `Bearer ${mobileSessionToken}` } : {}),
@@ -193,7 +200,7 @@ async function mobileApiRequest<T>(url: string, options: RequestOptions) {
     headers,
     method: options.method ?? 'GET',
     responseType: 'json',
-    url: buildApiUrl(url),
+    url: buildApiUrl(url, apiBaseUrl),
   }).catch((error) => {
     emitNetworkStatus(false);
     throw error;
@@ -221,10 +228,12 @@ export async function apiRequest<T>(url: string, options: RequestOptions = {}) {
     return mobileApiRequest<T>(url, options);
   }
 
-  const mobileSessionToken = readMobileSessionToken();
+  const apiBaseUrl = options.apiBaseUrl ?? getActiveApiBase();
+  const mobileSessionToken = options.skipAuth ? null : readMobileSessionToken(apiBaseUrl);
+  const { apiBaseUrl: _apiBaseUrl, skipAuth: _skipAuth, ...fetchOptions } = options;
 
-  const response = await fetch(buildApiUrl(url), {
-    ...options,
+  const response = await fetch(buildApiUrl(url, apiBaseUrl), {
+    ...fetchOptions,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     credentials: 'include',
     headers: {
@@ -255,4 +264,13 @@ export async function apiRequest<T>(url: string, options: RequestOptions = {}) {
   }
 
   return (await response.json()) as T;
+}
+
+export async function checkApiHealth(apiBaseUrl: string) {
+  const normalizedApiBase = normalizeServerApiBase(apiBaseUrl);
+  await apiRequest<{ ok: true }>('/api/health', {
+    apiBaseUrl: normalizedApiBase,
+    skipAuth: true,
+  });
+  return normalizedApiBase;
 }

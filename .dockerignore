@@ -1,0 +1,10 @@
+node_modules
+dist
+out
+release
+.git
+.env
+*.log
+android/app/build
+site/dist
+wechat-miniprogram/dist

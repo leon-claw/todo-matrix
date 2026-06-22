@@ -10,6 +10,7 @@ export const config = {
   isProduction: process.env.NODE_ENV === 'production',
   port: readNumber('SERVER_PORT', 3001),
   sessionDays: readNumber('SESSION_DAYS', 30),
+  webRoot: process.env.WEB_ROOT || '',
 };
 
 export function requireEnv(name: string) {
