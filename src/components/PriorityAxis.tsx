@@ -6,6 +6,7 @@ import type { ECharts, EChartsCoreOption } from 'echarts/core';
 import { GraphicComponent, GridComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import { ScatterChart } from 'echarts/charts';
 import { CanvasRenderer } from 'echarts/renderers';
+import { useTranslation } from 'react-i18next';
 import type { MatrixTask, TaskMetrics } from '../types';
 import { formatTaskDisplayTitle } from '../lib/taskPresentation';
 
@@ -380,7 +381,13 @@ function buildGraphicElements(
   });
 }
 
-function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
+function buildBaseOption(
+  tasks: MatrixTask[],
+  axisLabels: {
+    importance: string;
+    urgency: string;
+  },
+): EChartsCoreOption {
   return {
     animation: false,
     tooltip: { show: false },
@@ -395,7 +402,7 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
       type: 'value',
       min: 0,
       max: 100,
-      name: '重要程度',
+      name: axisLabels.importance,
       nameLocation: 'middle',
       nameGap: 28,
       axisLine: {
@@ -414,7 +421,7 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
       type: 'value',
       min: 0,
       max: 100,
-      name: '紧急程度',
+      name: axisLabels.urgency,
       nameLocation: 'middle',
       nameGap: 36,
       axisLine: {
@@ -466,6 +473,7 @@ function buildBaseOption(tasks: MatrixTask[]): EChartsCoreOption {
 }
 
 export function PriorityAxis({ tasks, onInteractionEnd, onInteractionStart, onMetricsChange }: PriorityAxisProps) {
+  const { t, i18n } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ECharts | null>(null);
   const onMetricsChangeRef = useRef(onMetricsChange);
@@ -621,13 +629,19 @@ export function PriorityAxis({ tasks, onInteractionEnd, onInteractionStart, onMe
       return;
     }
 
-    chart.setOption(buildBaseOption(visibleTasks), true);
+    chart.setOption(
+      buildBaseOption(visibleTasks, {
+        importance: t('task.importance'),
+        urgency: t('task.urgency'),
+      }),
+      true,
+    );
     requestAnimationFrame(renderGraphicOverlay);
-  }, [renderGraphicOverlay, visibleTasks]);
+  }, [i18n.resolvedLanguage, renderGraphicOverlay, t, visibleTasks]);
 
   return (
     <Paper
-      aria-label="紧急程度和重要程度坐标轴"
+      aria-label={t('axis.sectionLabel')}
       component="section"
       variant="outlined"
       sx={{
@@ -643,25 +657,25 @@ export function PriorityAxis({ tasks, onInteractionEnd, onInteractionStart, onMe
     >
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h2">优先级坐标轴</Typography>
+          <Typography variant="h2">{t('axis.title')}</Typography>
           <Typography color="text.secondary" variant="body2">
-            纵轴是紧急程度，横轴是重要程度。
+            {t('axis.description')}
           </Typography>
         </Box>
         <Chip
-          label={`${visibleTasks.length} 项显示`}
+          label={t('axis.visibleCount', { count: visibleTasks.length })}
           size="small"
           sx={{ bgcolor: 'rgba(29, 78, 216, 0.08)', color: 'primary.dark', fontWeight: 700 }}
         />
       </Stack>
 
       <Box className="axis-frame">
-        <Box className="axis-chart" ref={containerRef} role="img" aria-label="任务优先级散点图" />
+        <Box className="axis-chart" ref={containerRef} role="img" aria-label={t('axis.chartLabel')} />
         {!visibleTasks.length ? (
           <Box className="axis-empty">
             <TouchAppRoundedIcon color="disabled" />
             <Typography color="text.secondary" variant="body2">
-              在 TODO 中打开“显示在坐标轴中”后会出现在这里
+              {t('axis.empty')}
             </Typography>
           </Box>
         ) : null}

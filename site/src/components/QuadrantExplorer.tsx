@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { content } from '../utils/mdxParser';
-import { Sparkles, Calendar, BookOpen, Trash2, ArrowUpRight, Zap, ListTodo } from 'lucide-react';
+import { Calendar, BookOpen, Trash2, ArrowUpRight, Zap, ListTodo } from 'lucide-react';
+import { useSiteContent } from '../i18n/content';
 
 export default function QuadrantExplorer() {
+  const content = useSiteContent();
   const [activeQuad, setActiveQuad] = useState<string | null>(null);
 
   // Map icons to the corresponding quadrant index or ID
@@ -71,10 +71,7 @@ export default function QuadrantExplorer() {
               <div>
                 <div className="flex justify-between items-start">
                   <span className="text-[10px] sm:text-xs font-mono font-bold text-gray-400 uppercase tracking-widest block">
-                    {quad.id === 'do-first' ? 'QUADRANT I · Do First' : 
-                     quad.id === 'plan' ? 'QUADRANT II · Plan' : 
-                     quad.id === 'delegate' ? 'QUADRANT III · Delegate' : 
-                     'QUADRANT IV · Eliminate'}
+                    {content.ui.quadrant.labels[quad.id]}
                   </span>
                   
                   <div className={`p-2.5 rounded-lg ${
@@ -92,7 +89,7 @@ export default function QuadrantExplorer() {
                   {quad.title}
                 </h3>
                 <p className="text-[11px] sm:text-xs text-primary/70 font-sans font-medium mt-1">
-                  行动指引: {quad.action}
+                  {content.ui.quadrant.actionLabel}: {quad.action}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-500 mt-3 leading-relaxed">
                   {quad.desc}
@@ -103,7 +100,9 @@ export default function QuadrantExplorer() {
               <div className="pt-5 border-t border-brand-border/50">
                 <div className="flex items-center gap-1.5 mb-2.5">
                   <ListTodo className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-widest">典型任务映射</span>
+                  <span className="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-widest">
+                    {content.ui.quadrant.examplesLabel}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {(quad.examples || []).map((taskName, idx) => (
@@ -123,7 +122,7 @@ export default function QuadrantExplorer() {
                   
                   {/* Subtle link arrow indicator on hover */}
                   <div className={`text-xs ml-auto items-center text-gray-400 font-medium transition-all ${isActive ? 'translate-x-1 opacity-100 flex' : 'opacity-0 hidden'}`}>
-                    <span>前往坐标</span>
+                    <span>{content.ui.quadrant.goToAxis}</span>
                     <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                   </div>
                 </div>

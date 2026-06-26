@@ -1,9 +1,5 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ArrowRight, Sparkles, Download, Layers, ShieldCheck, 
-  HelpCircle, Monitor, Smartphone, Globe, Plus, Play, Info, Eye, CheckCircle2
-} from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, Sparkles, Download } from 'lucide-react';
 
 // Import our modular custom sections
 import Navigation from './components/Navigation';
@@ -16,9 +12,11 @@ import TrustSection from './components/TrustSection';
 import Footer from './components/Footer';
 
 import { TODO_MATRIX_APP_URL } from './config/urls';
-import { content } from './utils/mdxParser';
+import { LanguageBootstrap } from './i18n/LanguageBootstrap';
+import { useSiteContent } from './i18n/content';
 
 export default function App() {
+  const content = useSiteContent();
   // Global switcher dropdown status tracking
   const [showAppMatrix, setShowAppMatrix] = useState(false);
 
@@ -41,6 +39,7 @@ export default function App() {
       onClick={handleOverlayClose}
       className="min-h-screen bg-[#f6f8fb] text-[#111827] font-sans antialiased selection:bg-primary/10 selection:text-primary transition-colors duration-300"
     >
+      <LanguageBootstrap />
       {/* Top Header Navigation */}
       <Navigation 
         onScrollToSection={handleScrollToSection}
@@ -48,7 +47,7 @@ export default function App() {
         setShowAppMatrix={setShowAppMatrix}
       />
 
-      {/* Hero首屏 Section - Featuring the 3D iOS Music-App Style Preview Carousel */}
+      {/* Hero section with the 3D app screenshot carousel */}
       <section id="hero" className="pt-24 pb-16 md:pt-32 md:pb-20 overflow-hidden relative border-b border-brand-border/60">
         
         {/* Abstract grids accent background */}
@@ -65,7 +64,7 @@ export default function App() {
             
             <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wider font-mono uppercase mb-2">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>新人类待办维度方案 · Todo Matrix V3.0</span>
+              <span>{content.ui.heroBadge}</span>
             </div>
 
             <h1 className="font-display font-medium text-4xl sm:text-5xl md:text-[54px] text-gray-900 tracking-tight leading-none">
@@ -110,7 +109,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* Core values Section (核心价值区) */}
+      {/* Core values section */}
       <section id="values" className="py-16 md:py-20 border-b border-brand-border/60 bg-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
@@ -149,41 +148,41 @@ export default function App() {
           {/* Frictionless cloud synchronization inline statement */}
           <div className="mt-12 p-3 text-center text-xs text-gray-400 font-mono flex items-center justify-center gap-1.5 flex-col sm:flex-row">
             <span className="font-bold text-primary mr-1 flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-sm">PWA</span>
-            <span>本地即开即用 · 登录后账户无缝打通跨终端云同步。</span>
+            <span>{content.ui.pwaNote}</span>
           </div>
 
         </div>
       </section>
 
-      {/* Methodology Section (交叉象限探究区) */}
+      {/* Methodology section */}
       <section id="methodology" className="py-16 md:py-20 border-b border-brand-border/60 bg-[#fbfcfd]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <QuadrantExplorer />
         </div>
       </section>
 
-      {/* Flow Steps Timeline Section (工作流程图) */}
+      {/* Workflow section */}
       <section id="workflow" className="py-16 md:py-20 border-b border-brand-border/60 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <WorkflowSection />
         </div>
       </section>
 
-      {/* Multiple platform downloads & client install Section (多端与下载区) */}
+      {/* Platform downloads section */}
       <section id="installer" className="py-16 md:py-20 border-b border-brand-border/60 bg-[#fcfdfe]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Installer />
         </div>
       </section>
 
-      {/* Multi Workspace Suites Ecosystem Area (应用生态区) */}
+      {/* App ecosystem section */}
       <section id="ecosystem" className="py-16 md:py-20 border-b border-brand-border/60 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <AppEcosystem />
         </div>
       </section>
 
-      {/* Trust & Local State System Area (数据安全可靠区) */}
+      {/* Data and reliability section */}
       <section id="trust" className="py-16 md:py-20 bg-[#f8fafc]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <TrustSection />

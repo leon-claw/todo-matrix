@@ -14,6 +14,7 @@ import {
 import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
 import DeleteSweepRoundedIcon from '@mui/icons-material/DeleteSweepRounded';
 import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
+import { useTranslation } from 'react-i18next';
 
 type PendingAction = 'replace-cloud' | 'clear-local' | null;
 
@@ -32,13 +33,14 @@ export function DataResolutionPanel({
   onLogout,
   onReplaceCloud,
 }: DataResolutionPanelProps) {
+  const { t } = useTranslation();
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
 
   const isReplace = pendingAction === 'replace-cloud';
-  const dialogTitle = isReplace ? '覆盖云端并删除本地？' : '删除本地任务？';
+  const dialogTitle = isReplace ? t('dataResolution.replaceTitle') : t('dataResolution.clearTitle');
   const dialogText = isReplace
-    ? `将用当前 ${localCount} 个本地任务替换云端任务。成功后会删除本地任务，之后进入云端模式。`
-    : `将删除当前 ${localCount} 个本地任务，并保留云端任务。这个操作无法撤销。`;
+    ? t('dataResolution.replaceText', { count: localCount })
+    : t('dataResolution.clearText', { count: localCount });
 
   async function confirmAction() {
     if (pendingAction === 'replace-cloud') {
@@ -66,14 +68,14 @@ export function DataResolutionPanel({
         }}
       >
         <Stack spacing={1}>
-          <Typography variant="h2">处理本地任务</Typography>
+          <Typography variant="h2">{t('dataResolution.title')}</Typography>
           <Typography color="text.secondary" variant="body2">
-            你已登录云端账号，但当前设备还有 {localCount} 个本地任务。为了避免两端数据混乱，请先选择如何处理。
+            {t('dataResolution.description', { count: localCount })}
           </Typography>
         </Stack>
 
         <Alert severity="info">
-          云端模式会优先使用服务器数据库。本地任务处理完成后，应用会进入当前账号的云端任务列表。
+          {t('dataResolution.info')}
         </Alert>
 
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
@@ -85,7 +87,7 @@ export function DataResolutionPanel({
             startIcon={<CloudUploadRoundedIcon />}
             variant="contained"
           >
-            用本地覆盖云端
+            {t('dataResolution.replaceAction')}
           </Button>
           <Button
             color="error"
@@ -95,12 +97,12 @@ export function DataResolutionPanel({
             startIcon={<DeleteSweepRoundedIcon />}
             variant="outlined"
           >
-            删除本地，保留云端
+            {t('dataResolution.clearAction')}
           </Button>
         </Stack>
 
         <Button disabled={isBusy} onClick={onLogout} startIcon={<LogoutRoundedIcon />} variant="text">
-          退出登录，继续本地模式
+          {t('dataResolution.logoutLocal')}
         </Button>
       </Paper>
 
@@ -111,10 +113,10 @@ export function DataResolutionPanel({
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button disabled={isBusy} onClick={() => setPendingAction(null)} variant="outlined">
-            取消
+            {t('app.cancel')}
           </Button>
           <Button color={isReplace ? 'primary' : 'error'} disabled={isBusy} onClick={confirmAction} variant="contained">
-            确认
+            {t('app.confirm')}
           </Button>
         </DialogActions>
       </Dialog>

@@ -2,6 +2,7 @@ import { Box, ButtonBase, Paper, Typography } from '@mui/material';
 import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import { alpha } from '@mui/material/styles';
+import { useTranslation } from 'react-i18next';
 import { appNavigationItems, type AppPage } from '../lib/appNavigation';
 
 interface AppBottomNavigationProps {
@@ -15,9 +16,11 @@ const navigationIcons: Record<AppPage, typeof HomeRoundedIcon> = {
 };
 
 export function AppBottomNavigation({ activePage, onPageChange }: AppBottomNavigationProps) {
+  const { t } = useTranslation();
+
   return (
     <Box
-      aria-label="Primary navigation"
+      aria-label={t('navigation.primary')}
       component="nav"
       sx={{
         bottom: { xs: 0, md: 18 },
@@ -142,7 +145,7 @@ export function AppBottomNavigation({ activePage, onPageChange }: AppBottomNavig
                     zIndex: 1,
                   }}
                 >
-                  {item.label}
+                  {t(`navigation.${item.id}`)}
                 </Typography>
               </ButtonBase>
             );

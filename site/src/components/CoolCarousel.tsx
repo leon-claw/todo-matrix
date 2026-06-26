@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Monitor, Smartphone, SlidersHorizontal } fro
 import desktopHomeImg from '../assets/images/carousel-desktop-home.png';
 import mobileHomeImg from '../assets/images/carousel-mobile-home.png';
 import editFlowImg from '../assets/images/carousel-edit-flow.png';
+import { useSiteContent } from '../i18n/content';
 
 interface Slide {
   id: number;
@@ -15,35 +16,21 @@ interface Slide {
   image: string;
 }
 
-const slides: Slide[] = [
-  {
-    id: 0,
-    badge: '桌面矩阵 · DESKTOP',
-    title: '在大屏上看清任务位置',
-    subtitle: '重要度与紧急度组成坐标轴，任务落在矩阵里的哪个位置，优先级就一眼清楚。',
-    icon: <Monitor className="w-5 h-5 text-blue-600" />,
-    image: desktopHomeImg,
-  },
-  {
-    id: 1,
-    badge: '移动端矩阵 · MOBILE',
-    title: '手机上也能整理优先级',
-    subtitle: '随时查看任务、切换筛选、隐藏坐标轴，在碎片时间里也能把事情重新排好。',
-    icon: <Smartphone className="w-5 h-5 text-emerald-600" />,
-    image: mobileHomeImg,
-  },
-  {
-    id: 2,
-    badge: '重要度 × 紧急度',
-    title: '调整两个数值，任务重新排序',
-    subtitle: '在编辑页修改重要度、紧急度、进度和子待办，保存后任务会回到新的矩阵位置。',
-    icon: <SlidersHorizontal className="w-5 h-5 text-indigo-600" />,
-    image: editFlowImg,
-  },
-];
-
 export default function CoolCarousel() {
+  const content = useSiteContent();
   const [index, setIndex] = useState(0);
+  const slideImages = [desktopHomeImg, mobileHomeImg, editFlowImg];
+  const slideIcons = [
+    <Monitor className="w-5 h-5 text-blue-600" />,
+    <Smartphone className="w-5 h-5 text-emerald-600" />,
+    <SlidersHorizontal className="w-5 h-5 text-indigo-600" />,
+  ];
+  const slides: Slide[] = content.ui.carousel.slides.map((slide, slideIndex) => ({
+    ...slide,
+    id: slideIndex,
+    icon: slideIcons[slideIndex] ?? slideIcons[0],
+    image: slideImages[slideIndex] ?? slideImages[0],
+  }));
 
   const handleNext = () => {
     setIndex((prev) => (prev + 1) % slides.length);
@@ -97,7 +84,7 @@ export default function CoolCarousel() {
         <button
           onClick={handlePrev}
           className="absolute left-2 sm:left-6 z-40 bg-white/90 hover:bg-white border border-brand-border hover:border-slate-400 p-2.5 sm:p-3 rounded-full shadow-md text-gray-700 hover:text-primary hover:scale-105 transition-all duration-200 cursor-pointer"
-          aria-label="上一张"
+          aria-label={content.ui.carousel.previous}
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -148,7 +135,7 @@ export default function CoolCarousel() {
         <button
           onClick={handleNext}
           className="absolute right-2 sm:right-6 z-40 bg-white/90 hover:bg-white border border-brand-border hover:border-slate-400 p-2.5 sm:p-3 rounded-full shadow-md text-gray-700 hover:text-primary hover:scale-105 transition-all duration-200 cursor-pointer"
-          aria-label="下一张"
+          aria-label={content.ui.carousel.next}
         >
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -187,7 +174,7 @@ export default function CoolCarousel() {
               className={`h-2 rounded-full transition-all duration-300 ${
                 slide.id === index ? 'w-7 bg-primary shadow-xs' : 'w-2 bg-slate-300 hover:bg-slate-400'
               }`}
-              aria-label={`查看第 ${slide.id + 1} 张`}
+              aria-label={content.ui.carousel.dotLabel.replace('{{index}}', String(slide.id + 1))}
             />
           ))}
         </div>

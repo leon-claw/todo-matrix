@@ -20,6 +20,14 @@ export type TaskBackupFileResult =
       type: 'ready';
     };
 
+export type TaskBackupParseErrorCode = 'invalid-json' | 'unsupported-format';
+
+export class TaskBackupParseError extends Error {
+  constructor(public readonly code: TaskBackupParseErrorCode) {
+    super(code === 'invalid-json' ? '无效的 JSON 备份文件' : '无效或不支持的 Todo Matrix 备份文件');
+  }
+}
+
 const subTodoSchema = z.object({
   completed: z.boolean(),
   id: z.string().min(1),
@@ -84,18 +92,21 @@ export function parseTaskBackup(json: string): TaskBackup {
   try {
     parsed = JSON.parse(json);
   } catch {
-    throw new Error('无效的 JSON 备份文件');
+    throw new TaskBackupParseError('invalid-json');
   }
 
   const result = taskBackupSchema.safeParse(parsed);
   if (!result.success) {
-    throw new Error('无效或不支持的 Todo Matrix 备份文件');
+    throw new TaskBackupParseError('unsupported-format');
   }
 
   return result.data;
 }
 
-export async function saveTaskBackupFile(file: Extract<TaskBackupFileResult, { type: 'ready' }>) {
+export async function saveTaskBackupFile(
+  file: Extract<TaskBackupFileResult, { type: 'ready' }>,
+  options: { title?: string } = {},
+) {
   const blob = new Blob([file.json], { type: 'application/json;charset=utf-8' });
 
   if (window.Capacitor?.isNativePlatform?.()) {
@@ -106,7 +117,7 @@ export async function saveTaskBackupFile(file: Extract<TaskBackupFileResult, { t
 
     await navigator.share({
       files: [nativeFile],
-      title: 'Todo Matrix 数据备份',
+      title: options.title ?? 'Todo Matrix 数据备份',
     });
     return;
   }

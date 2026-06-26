@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -25,6 +26,7 @@ function isStandaloneMode() {
 }
 
 function InstallPromptContent() {
+  const { t } = useTranslation();
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
 
@@ -58,11 +60,11 @@ function InstallPromptContent() {
         color="inherit"
         onClick={handleInstall}
         startIcon={<DownloadRoundedIcon />}
-        title={promptEvent ? '安装到设备' : '浏览器暂未开放安装弹窗时，可从浏览器菜单安装'}
+        title={promptEvent ? t('install.title') : t('install.unavailableTitle')}
         type="button"
         variant="outlined"
       >
-        安装到设备
+        {t('install.title')}
       </Button>
 
       <Dialog
@@ -72,26 +74,26 @@ function InstallPromptContent() {
         onClose={() => setShowInstallHelp(false)}
         slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
-        <DialogTitle>安装到设备</DialogTitle>
+        <DialogTitle>{t('install.title')}</DialogTitle>
         <DialogContent>
           <Typography color="text.secondary" variant="body2">
-            当前浏览器没有开放自动安装弹窗，或者应用已经安装。可以按下面的方式手动安装。
+            {t('install.helpDescription')}
           </Typography>
           <List dense sx={{ mt: 1 }}>
             <ListItem disablePadding>
-              <ListItemText primary="Chrome / Edge 桌面端" secondary="点击地址栏右侧的安装图标，或打开浏览器菜单，选择“安装应用”。" />
+              <ListItemText primary={t('install.chromeDesktop')} secondary={t('install.chromeDesktopHelp')} />
             </ListItem>
             <ListItem disablePadding>
-              <ListItemText primary="Android Chrome" secondary="打开右上角菜单，选择“安装应用”或“添加到主屏幕”。" />
+              <ListItemText primary={t('install.androidChrome')} secondary={t('install.androidChromeHelp')} />
             </ListItem>
             <ListItem disablePadding>
-              <ListItemText primary="iPhone / iPad Safari" secondary="点击分享按钮，选择“添加到主屏幕”。iOS 通常不会触发网页内安装弹窗。" />
+              <ListItemText primary={t('install.iosSafari')} secondary={t('install.iosSafariHelp')} />
             </ListItem>
           </List>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setShowInstallHelp(false)} variant="contained">
-            知道了
+            {t('install.gotIt')}
           </Button>
         </DialogActions>
       </Dialog>

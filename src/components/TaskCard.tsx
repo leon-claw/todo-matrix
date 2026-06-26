@@ -19,6 +19,7 @@ import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUnch
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { type MouseEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatTaskDisplayTitle } from '../lib/taskPresentation';
 import type { MatrixTask, TaskMetrics } from '../types';
 import { SubtasksPreview } from './SubtasksPreview';
@@ -40,7 +41,11 @@ export function TaskCard({
   onToggle,
   onToggleAxis,
 }: TaskCardProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
+  const toggleLabel = task.completed ? t('task.markIncomplete') : t('task.markComplete');
+  const expandLabel = isExpanded ? t('task.collapse') : t('task.expand');
+  const axisLabel = task.showOnAxis ? t('task.hideFromAxis') : t('task.showInAxis');
 
   function stopClickPropagation(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
@@ -74,9 +79,9 @@ export function TaskCard({
       }}
     >
       <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', p: { xs: 1.1, sm: 1.25 }, pl: 1.75 }}>
-        <Tooltip title={task.completed ? '标记为未完成' : '标记为完成'}>
+        <Tooltip title={toggleLabel}>
           <IconButton
-            aria-label={task.completed ? '标记为未完成' : '标记为完成'}
+            aria-label={toggleLabel}
             onClick={(event) => {
               stopClickPropagation(event);
               onToggle(task.id);
@@ -120,9 +125,9 @@ export function TaskCard({
         </Box>
 
         <Stack direction="row" spacing={0.5} sx={{ flex: '0 0 auto', position: 'relative', zIndex: 2 }}>
-          <Tooltip title={isExpanded ? '折叠任务' : '展开任务'}>
+          <Tooltip title={expandLabel}>
             <IconButton
-              aria-label={isExpanded ? '折叠任务' : '展开任务'}
+              aria-label={expandLabel}
               onClick={(event) => {
                 stopClickPropagation(event);
                 setIsExpanded((current) => !current);
@@ -132,9 +137,9 @@ export function TaskCard({
               {isExpanded ? <ExpandLessRoundedIcon /> : <ExpandMoreRoundedIcon />}
             </IconButton>
           </Tooltip>
-          <Tooltip title="编辑任务">
+          <Tooltip title={t('task.edit')}>
             <IconButton
-              aria-label="编辑任务"
+              aria-label={t('task.edit')}
               onClick={(event) => {
                 stopClickPropagation(event);
                 onEdit(task);
@@ -144,9 +149,9 @@ export function TaskCard({
               <EditRoundedIcon />
             </IconButton>
           </Tooltip>
-          <Tooltip title={task.showOnAxis ? '从坐标轴隐藏' : '显示在坐标轴中'}>
+          <Tooltip title={axisLabel}>
             <IconButton
-              aria-label={task.showOnAxis ? '从坐标轴隐藏' : '显示在坐标轴中'}
+              aria-label={axisLabel}
               color={task.showOnAxis ? 'primary' : 'default'}
               onClick={(event) => {
                 stopClickPropagation(event);
@@ -157,9 +162,9 @@ export function TaskCard({
               {task.showOnAxis ? <VisibilityRoundedIcon /> : <VisibilityOffRoundedIcon />}
             </IconButton>
           </Tooltip>
-          <Tooltip title="删除任务">
+          <Tooltip title={t('task.delete')}>
             <IconButton
-              aria-label="删除任务"
+              aria-label={t('task.delete')}
               color="error"
               onClick={(event) => {
                 stopClickPropagation(event);
@@ -201,14 +206,14 @@ export function TaskCard({
           <Box>
             <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
               <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
-                进度
+                {t('task.progress')}
               </Typography>
               <Typography color="text.secondary" variant="caption">
                 {task.progress}%
               </Typography>
             </Stack>
             <Slider
-              aria-label="进度"
+              aria-label={t('task.progress')}
               disabled={task.autoProgress}
               max={100}
               min={0}

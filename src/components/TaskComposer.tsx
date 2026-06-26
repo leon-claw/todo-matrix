@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import { FormEvent, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DEFAULT_TASK_COLOR, TASK_COLOR_PRESETS } from '../constants/taskAppearance';
 import { calculateSubtaskProgress, normalizeSubtasks } from '../lib/subtasks';
 import { SubtasksEditor } from './SubtasksEditor';
@@ -57,6 +58,7 @@ export function TaskComposer({
   initialTask,
   onSubmit,
 }: TaskComposerProps) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<TaskFormValues>(() => getInitialValues(initialTask));
 
   useEffect(() => {
@@ -95,9 +97,9 @@ export function TaskComposer({
         autoComplete="off"
         autoFocus
         fullWidth
-        label="任务标题"
+        label={t('task.title')}
         onChange={(event) => updateValue('title', event.target.value)}
-        placeholder="例如：做晚饭"
+        placeholder={t('task.titlePlaceholder')}
         slotProps={{ htmlInput: { maxLength: 80 } }}
         value={values.title}
       />
@@ -106,7 +108,7 @@ export function TaskComposer({
 
       <Box>
         <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.75 }} variant="caption">
-          颜色标签
+          {t('task.colorLabel')}
         </Typography>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
           {TASK_COLOR_PRESETS.map((color) => {
@@ -114,7 +116,7 @@ export function TaskComposer({
 
             return (
               <ButtonBase
-                aria-label={`选择颜色 ${color}`}
+                aria-label={t('task.selectColor', { color })}
                 aria-pressed={selected}
                 key={color}
                 onClick={() => updateValue('color', color)}
@@ -138,7 +140,7 @@ export function TaskComposer({
             );
           })}
           <TextField
-            label="自定义"
+            label={t('task.customColor')}
             onChange={(event) => updateValue('color', event.target.value)}
             size="small"
             sx={{ width: 112 }}
@@ -152,10 +154,10 @@ export function TaskComposer({
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.25 }} variant="caption">
-            重要程度 {values.importance}
+            {t('task.importance')} {values.importance}
           </Typography>
           <Slider
-            aria-label="重要程度"
+            aria-label={t('task.importance')}
             max={100}
             min={0}
             value={values.importance}
@@ -165,10 +167,10 @@ export function TaskComposer({
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography color="text.secondary" sx={{ display: 'block', fontWeight: 700, mb: 0.25 }} variant="caption">
-            紧急程度 {values.urgency}
+            {t('task.urgency')} {values.urgency}
           </Typography>
           <Slider
-            aria-label="紧急程度"
+            aria-label={t('task.urgency')}
             max={100}
             min={0}
             value={values.urgency}
@@ -179,14 +181,14 @@ export function TaskComposer({
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.25 }}>
             <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
-              进度
+              {t('task.progress')}
             </Typography>
             <Typography color="text.secondary" variant="caption">
               {values.progress}%
             </Typography>
           </Stack>
           <Slider
-            aria-label="进度"
+            aria-label={t('task.progress')}
             disabled={values.autoProgress}
             max={100}
             min={0}
@@ -206,7 +208,7 @@ export function TaskComposer({
               size="small"
             />
           }
-          label="显示在坐标轴中"
+          label={t('task.showOnAxis')}
         />
         <FormControlLabel
           control={
@@ -216,16 +218,16 @@ export function TaskComposer({
               size="small"
             />
           }
-          label="自动统计进度"
+          label={t('task.autoProgress')}
         />
       </Stack>
 
       <TextField
         fullWidth
-        label="备注"
+        label={t('task.notes')}
         multiline
         onChange={(event) => updateValue('notes', event.target.value)}
-        placeholder="补充上下文、负责人或下一步动作"
+        placeholder={t('task.notesPlaceholder')}
         minRows={3}
         maxRows={8}
         slotProps={{ htmlInput: { maxLength: 1000 } }}

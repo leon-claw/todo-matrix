@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { content } from '../utils/mdxParser';
 import { Inbox, Sliders, LayoutGrid, CheckSquare, BarChart, Flag, ChevronRight } from 'lucide-react';
+import { useSiteContent } from '../i18n/content';
 
 interface Step {
   num: string;
@@ -13,6 +13,7 @@ interface Step {
 }
 
 export default function WorkflowSection() {
+  const content = useSiteContent();
   const [activeStep, setActiveStep] = useState<number>(0);
 
   const icons = [
@@ -92,7 +93,9 @@ export default function WorkflowSection() {
                   {step.icon}
                 </div>
 
-                <span className="text-[10px] font-mono font-bold text-gray-400 mt-4 tracking-wider">STEP {step.num}</span>
+                <span className="text-[10px] font-mono font-bold text-gray-400 mt-4 tracking-wider">
+                  {content.ui.workflow.stepLabel} {step.num}
+                </span>
                 <span className="text-xs font-bold text-brand-text mt-1.5 text-center group-hover:text-primary transition-colors block">
                   {step.title}
                 </span>
@@ -112,7 +115,9 @@ export default function WorkflowSection() {
           {/* Big Colorful Number Circle Accent */}
           <div className="md:col-span-3 flex justify-center md:border-r border-brand-border/60 md:pr-6">
             <div className={`w-28 h-28 rounded-full flex flex-col items-center justify-center ${steps[activeStep].color} shadow-lg relative`}>
-              <span className="text-[11px] font-mono font-bold tracking-wider opacity-85 uppercase">STAGE</span>
+              <span className="text-[11px] font-mono font-bold tracking-wider opacity-85 uppercase">
+                {content.ui.workflow.stageLabel}
+              </span>
               <span className="text-4xl font-display font-extrabold -mt-1">{steps[activeStep].num}</span>
             </div>
           </div>
@@ -120,7 +125,7 @@ export default function WorkflowSection() {
           <div className="md:col-span-9 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-primary uppercase font-mono tracking-widest bg-blue-50 px-2 py-0.5 rounded">
-                工作流操作环节
+                {content.ui.workflow.activeLabel}
               </span>
               <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
               <span className="text-sm font-semibold text-gray-700">{steps[activeStep].desc}</span>
@@ -161,7 +166,9 @@ export default function WorkflowSection() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-800">{step.title}</span>
-                    <span className="text-[10px] font-mono text-gray-400 font-bold">STEP {step.num}</span>
+                    <span className="text-[10px] font-mono text-gray-400 font-bold">
+                      {content.ui.workflow.stepLabel} {step.num}
+                    </span>
                   </div>
                   <p className="text-[11px] text-gray-500 mt-1 leading-snug">{step.desc}</p>
                   

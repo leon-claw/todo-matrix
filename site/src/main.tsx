@@ -1,6 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot, hydrateRoot} from 'react-dom/client';
 import App from './App.tsx';
+import './i18n/i18n';
 import './index.css';
 
 const root = document.getElementById('root')!;

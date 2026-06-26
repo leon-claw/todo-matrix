@@ -1,6 +1,7 @@
 import { Box, Button, Checkbox, IconButton, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import { useTranslation } from 'react-i18next';
 import { createSubTodo, normalizeSubtasks } from '../lib/subtasks';
 import type { SubTodo } from '../types';
 
@@ -10,6 +11,8 @@ interface SubtasksEditorProps {
 }
 
 export function SubtasksEditor({ onChange, subtasks }: SubtasksEditorProps) {
+  const { t } = useTranslation();
+
   function commit(nextSubtasks: SubTodo[]) {
     onChange(normalizeSubtasks(nextSubtasks));
   }
@@ -22,7 +25,7 @@ export function SubtasksEditor({ onChange, subtasks }: SubtasksEditorProps) {
     <Box>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
         <Typography color="text.secondary" sx={{ fontWeight: 700 }} variant="caption">
-          子待办
+          {t('task.subtasks')}
         </Typography>
         <Button
           onClick={() => onChange([...subtasks, createSubTodo()])}
@@ -31,7 +34,7 @@ export function SubtasksEditor({ onChange, subtasks }: SubtasksEditorProps) {
           type="button"
           variant="text"
         >
-          添加
+          {t('task.addSubtask')}
         </Button>
       </Stack>
 
@@ -59,15 +62,15 @@ export function SubtasksEditor({ onChange, subtasks }: SubtasksEditorProps) {
                 minRows={1}
                 onBlur={() => commit(subtasks)}
                 onChange={(event) => updateSubtask(subtask.id, { title: event.target.value })}
-                placeholder="子待办"
+                placeholder={t('task.subtaskPlaceholder')}
                 size="small"
                 value={subtask.title}
                 variant="standard"
                 slotProps={{ htmlInput: { maxLength: 120 } }}
               />
-              <Tooltip title="删除子待办">
+              <Tooltip title={t('task.deleteSubtask')}>
                 <IconButton
-                  aria-label="删除子待办"
+                  aria-label={t('task.deleteSubtask')}
                   onClick={() => onChange(subtasks.filter((current) => current.id !== subtask.id))}
                   size="small"
                   sx={{ mt: 0.25 }}
@@ -80,7 +83,7 @@ export function SubtasksEditor({ onChange, subtasks }: SubtasksEditorProps) {
           ))
         ) : (
           <Typography color="text.secondary" sx={{ px: 0.5, py: 0.75 }} variant="body2">
-            暂无子待办
+            {t('task.emptySubtasks')}
           </Typography>
         )}
       </Paper>

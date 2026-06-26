@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DEFAULT_TASK_COLOR } from '../constants/taskAppearance';
 import { clearTasks, loadTasks, saveTasks } from '../lib/localDatabase';
 import { calculateSubtaskProgress, normalizeSubtasks } from '../lib/subtasks';
@@ -54,6 +55,7 @@ function normalizeTasks(tasks: MatrixTask[] | null) {
 }
 
 export function useLocalTasks() {
+  const { t } = useTranslation();
   const [tasks, setTasks] = useState<MatrixTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export function useLocalTasks() {
       })
       .catch(() => {
         if (active) {
-          setStorageError('本地数据读取失败，请检查浏览器存储权限。');
+          setStorageError(t('storage.localReadFailed'));
         }
       })
       .finally(() => {
@@ -92,15 +94,15 @@ export function useLocalTasks() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   const commit = useCallback((nextTasks: MatrixTask[]) => {
     const sortedTasks = sortTasks(nextTasks);
     setTasks(sortedTasks);
     saveTasks(sortedTasks).catch(() => {
-      setStorageError('本地保存失败，请检查浏览器存储空间。');
+      setStorageError(t('storage.localSaveFailed'));
     });
-  }, []);
+  }, [t]);
 
   const addTask = useCallback(
     (input: TaskFormValues) => {
@@ -220,9 +222,9 @@ export function useLocalTasks() {
     try {
       await clearTasks();
     } catch {
-      setStorageError('本地数据清理失败，请检查浏览器存储权限。');
+      setStorageError(t('storage.localClearFailed'));
     }
-  }, []);
+  }, [t]);
 
   const replaceLocalTasks = useCallback(async (nextTasks: MatrixTask[]) => {
     const normalizedTasks = normalizeTasks(nextTasks) ?? [];
@@ -232,10 +234,10 @@ export function useLocalTasks() {
       setTasks(sortedTasks);
       setStorageError(null);
     } catch {
-      setStorageError('本地数据导入失败，请检查浏览器存储空间。');
+      setStorageError(t('storage.localImportFailed'));
       throw new Error('Local import failed');
     }
-  }, []);
+  }, [t]);
 
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length;

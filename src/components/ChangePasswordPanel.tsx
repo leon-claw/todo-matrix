@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Alert, Box, Button, Divider, Stack, TextField, Typography } from '@mui/material';
 import LockResetRoundedIcon from '@mui/icons-material/LockResetRounded';
+import { useTranslation } from 'react-i18next';
 
 interface ChangePasswordPanelProps {
   error: string | null;
@@ -9,6 +10,7 @@ interface ChangePasswordPanelProps {
 }
 
 export function ChangePasswordPanel({ error, isLoading = false, onSubmit }: ChangePasswordPanelProps) {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [nextPassword, setNextPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,12 +21,12 @@ export function ChangePasswordPanel({ error, isLoading = false, onSubmit }: Chan
     setLocalError(null);
 
     if (nextPassword.length < 8) {
-      setLocalError('新密码至少需要 8 位。');
+      setLocalError(t('password.nextMin'));
       return;
     }
 
     if (nextPassword !== confirmPassword) {
-      setLocalError('两次输入的新密码不一致。');
+      setLocalError(t('password.mismatch'));
       return;
     }
 
@@ -34,9 +36,9 @@ export function ChangePasswordPanel({ error, isLoading = false, onSubmit }: Chan
   return (
     <Stack component="form" spacing={2.25} onSubmit={handleSubmit}>
       <Box>
-        <Typography variant="h2">修改密码</Typography>
+        <Typography variant="h2">{t('password.title')}</Typography>
         <Typography color="text.secondary" variant="body2">
-          修改后下次登录请使用新密码。当前设备的登录状态会保持。
+          {t('password.subtitle')}
         </Typography>
       </Box>
 
@@ -46,7 +48,7 @@ export function ChangePasswordPanel({ error, isLoading = false, onSubmit }: Chan
         autoComplete="current-password"
         autoFocus
         fullWidth
-        label="当前密码"
+        label={t('password.current')}
         onChange={(event) => setCurrentPassword(event.target.value)}
         required
         type="password"
@@ -55,8 +57,8 @@ export function ChangePasswordPanel({ error, isLoading = false, onSubmit }: Chan
       <TextField
         autoComplete="new-password"
         fullWidth
-        helperText="至少 8 位"
-        label="新密码"
+        helperText={t('auth.passwordHelper')}
+        label={t('password.next')}
         onChange={(event) => setNextPassword(event.target.value)}
         required
         type="password"
@@ -65,7 +67,7 @@ export function ChangePasswordPanel({ error, isLoading = false, onSubmit }: Chan
       <TextField
         autoComplete="new-password"
         fullWidth
-        label="确认新密码"
+        label={t('password.confirm')}
         onChange={(event) => setConfirmPassword(event.target.value)}
         required
         type="password"
@@ -81,7 +83,7 @@ export function ChangePasswordPanel({ error, isLoading = false, onSubmit }: Chan
         type="submit"
         variant="contained"
       >
-        保存新密码
+        {t('password.save')}
       </Button>
     </Stack>
   );

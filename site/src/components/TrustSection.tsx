@@ -1,8 +1,9 @@
 import React from 'react';
-import { ShieldCheck, Database, WifiOff, FileDown, Lock, ShieldAlert } from 'lucide-react';
-import { content } from '../utils/mdxParser';
+import { ShieldCheck, Database, WifiOff, FileDown, Lock } from 'lucide-react';
+import { useSiteContent } from '../i18n/content';
 
 export default function TrustSection() {
+  const content = useSiteContent();
   const icons = [
     <Lock className="w-5 h-5 text-gray-700" />,
     <Database className="w-5 h-5 text-gray-700" />,

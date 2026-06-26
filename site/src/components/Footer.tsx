@@ -1,11 +1,14 @@
 import React from 'react';
-import { LayoutGrid, Mail, HelpCircle, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Mail, HelpCircle } from 'lucide-react';
+import { useSiteContent } from '../i18n/content';
 
 interface FooterProps {
   onScrollToSection: (sectionId: string) => void;
 }
 
 export default function Footer({ onScrollToSection }: FooterProps) {
+  const content = useSiteContent();
+  const footer = content.ui.footer;
   const currentYear = new Date().getFullYear();
 
   return (
@@ -29,7 +32,7 @@ export default function Footer({ onScrollToSection }: FooterProps) {
             </div>
             
             <p className="text-[11px] sm:text-xs text-slate-400 leading-relaxed max-w-sm">
-              基于重要紧急十字交叉维度的智能化待办整理面板。看见真正的优先级冲突并排除日常琐碎噪音。
+              {footer.brandDescription}
             </p>
             
             <div className="flex items-center space-x-3 text-xs text-slate-400">
@@ -40,21 +43,21 @@ export default function Footer({ onScrollToSection }: FooterProps) {
 
           {/* Links 1: Navigation (2/12) */}
           <div className="md:col-span-2 space-y-3">
-            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">核心模块</h4>
+            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">{footer.columns[0]?.title}</h4>
             <ul className="space-y-1.5 text-[11px] sm:text-xs text-slate-400">
               <li>
                 <button onClick={() => onScrollToSection('hero')} className="hover:text-blue-400 bg-transparent p-0 border-0 outline-none cursor-pointer">
-                  智能矩阵首屏
+                  {footer.columns[0]?.links[0]}
                 </button>
               </li>
               <li>
                 <button onClick={() => onScrollToSection('values')} className="hover:text-blue-400 bg-transparent p-0 border-0 outline-none cursor-pointer">
-                  核心精益价值
+                  {footer.columns[0]?.links[1]}
                 </button>
               </li>
               <li>
                 <button onClick={() => onScrollToSection('methodology')} className="hover:text-blue-400 bg-transparent p-0 border-0 outline-none cursor-pointer">
-                  十字决策探索
+                  {footer.columns[0]?.links[2]}
                 </button>
               </li>
             </ul>
@@ -62,21 +65,21 @@ export default function Footer({ onScrollToSection }: FooterProps) {
 
           {/* Links 2: Downloads (2/12) */}
           <div className="md:col-span-2 space-y-3">
-            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">资源下载</h4>
+            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">{footer.columns[1]?.title}</h4>
             <ul className="space-y-1.5 text-[11px] sm:text-xs text-slate-400">
               <li>
                 <button onClick={() => onScrollToSection('installer')} className="hover:text-blue-400 bg-transparent p-0 border-0 outline-none cursor-pointer">
-                  浏览器 Web / PWA
+                  {footer.columns[1]?.links[0]}
                 </button>
               </li>
               <li>
                 <button onClick={() => onScrollToSection('installer')} className="hover:text-blue-400 bg-transparent p-0 border-0 outline-none cursor-pointer">
-                  Windows 原生桌面
+                  {footer.columns[1]?.links[1]}
                 </button>
               </li>
               <li>
                 <button onClick={() => onScrollToSection('installer')} className="hover:text-blue-400 bg-transparent p-0 border-0 outline-none cursor-pointer">
-                  Android 安装程序
+                  {footer.columns[1]?.links[2]}
                 </button>
               </li>
             </ul>
@@ -84,33 +87,33 @@ export default function Footer({ onScrollToSection }: FooterProps) {
 
           {/* Links 3: Ecosystem (2/12) */}
           <div className="md:col-span-2 space-y-3">
-            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">生态盒子 Matrix</h4>
+            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">{footer.columns[2]?.title}</h4>
             <ul className="space-y-1.5 text-[11px] sm:text-xs text-slate-400">
               <li>
-                <span className="text-white font-semibold">Todo Matrix</span>
+                <span className="text-white font-semibold">{footer.columns[2]?.links[0]}</span>
               </li>
               <li>
-                <span className="text-slate-500 truncate block">Note Grid (即将推出)</span>
+                <span className="text-slate-500 truncate block">{footer.columns[2]?.links[1]}</span>
               </li>
               <li>
-                <span className="text-slate-500 truncate block">Time Axis (即将推出)</span>
+                <span className="text-slate-500 truncate block">{footer.columns[2]?.links[2]}</span>
               </li>
             </ul>
           </div>
 
           {/* Links 4: Legal / Stats (2/12) */}
           <div className="md:col-span-2 space-y-3">
-            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">关于与隐私</h4>
+            <h4 className="text-xs font-bold text-slate-200 tracking-wider font-display uppercase">{footer.columns[3]?.title}</h4>
             <ul className="space-y-1.5 text-[11px] sm:text-xs text-slate-400">
               <li>
-                <span className="text-slate-400">本地离线保护</span>
+                <span className="text-slate-400">{footer.columns[3]?.links[0]}</span>
               </li>
               <li>
-                <span className="text-slate-400">数据自由一键导出</span>
+                <span className="text-slate-400">{footer.columns[3]?.links[1]}</span>
               </li>
               <li>
                 <span className="text-slate-400 flex items-center gap-1">
-                  <HelpCircle className="w-3.5 h-3.5" /> 联络反馈
+                  <HelpCircle className="w-3.5 h-3.5" /> {footer.columns[3]?.links[2]}
                 </span>
               </li>
             </ul>
@@ -121,12 +124,12 @@ export default function Footer({ onScrollToSection }: FooterProps) {
         {/* Lower Row copyright and notice */}
         <div className="flex flex-col sm:flex-row justify-between items-center text-[10px] sm:text-xs text-slate-500 space-y-3 sm:space-y-0">
           <div>
-            <span>&copy; {currentYear} Todo Matrix Core. 设计服务于专注.</span>
+            <span>&copy; {currentYear} Todo Matrix Core. {footer.copyright}</span>
           </div>
           
           <div className="flex items-center space-x-4">
-            <span className="text-slate-600">Privacy Policy</span>
-            <span className="text-slate-600">Terms of Service</span>
+            <span className="text-slate-600">{footer.privacy}</span>
+            <span className="text-slate-600">{footer.terms}</span>
             <span className="text-slate-600 font-mono">Build 2026.06.16</span>
           </div>
         </div>

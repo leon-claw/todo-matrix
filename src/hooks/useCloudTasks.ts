@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { ApiError, apiRequest } from '../lib/apiClient';
 import { calculateSubtaskProgress, normalizeSubtasks } from '../lib/subtasks';
 import { clampMetric, sortTasks } from '../lib/taskUtils';
@@ -85,13 +87,13 @@ async function submitTaskSnapshot(snapshot: MatrixTask[]) {
   });
 }
 
-function readRequestErrorMessage(error: unknown) {
+function readRequestErrorMessage(error: unknown, t: TFunction) {
   if (error instanceof ApiError && error.message) {
     if (error.status === 404) {
-      return '404 Not Found，当前后端没有找到同步接口，请部署新版后端或检查桌面端 API 地址';
+      return t('storage.cloudSyncEndpointMissing');
     }
 
-    return error.status === 0 ? `网络请求失败：${error.message}` : `${error.status} ${error.message}`;
+    return error.status === 0 ? t('storage.networkFailed', { message: error.message }) : `${error.status} ${error.message}`;
   }
 
   if (error instanceof Error && error.message) {
@@ -102,6 +104,7 @@ function readRequestErrorMessage(error: unknown) {
 }
 
 export function useCloudTasks(enabled: boolean) {
+  const { t } = useTranslation();
   const [tasks, setTasks] = useState<MatrixTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFlushPending, setIsFlushPending] = useState(false);
@@ -201,9 +204,9 @@ export function useCloudTasks(enabled: boolean) {
         setTasks(nextTasks);
       }
     } catch (error) {
-      const errorMessage = readRequestErrorMessage(error);
+      const errorMessage = readRequestErrorMessage(error, t);
       setStorageError(
-        errorMessage ? `云端数据同步失败：${errorMessage}，稍后会自动重试。` : '云端数据同步失败，稍后会自动重试。',
+        errorMessage ? t('storage.cloudSyncFailedRetryWithMessage', { message: errorMessage }) : t('storage.cloudSyncFailedRetry'),
       );
       if (!pendingSnapshotRef.current) {
         pendingSnapshotRef.current = snapshot;
@@ -214,7 +217,7 @@ export function useCloudTasks(enabled: boolean) {
       isFlushingRef.current = false;
       setIsFlushing(false);
     }
-  }, [enabled, scheduleFlush]);
+  }, [enabled, scheduleFlush, t]);
 
   useEffect(() => {
     flushPendingSyncRef.current = flushPendingSync;
@@ -281,9 +284,9 @@ export function useCloudTasks(enabled: boolean) {
         }
       } catch (error) {
         if (!isSyncPausedRef.current && requestPauseVersion === syncPauseVersionRef.current) {
-          const errorMessage = readRequestErrorMessage(error);
+          const errorMessage = readRequestErrorMessage(error, t);
           setStorageError(
-            errorMessage ? `云端数据读取失败：${errorMessage}。` : '云端数据读取失败，请检查后端服务和网络。',
+            errorMessage ? t('storage.cloudReadFailedWithMessage', { message: errorMessage }) : t('storage.cloudReadFailed'),
           );
         }
       } finally {
@@ -295,7 +298,7 @@ export function useCloudTasks(enabled: boolean) {
         }
       }
     },
-    [clearPullTimer, clearSyncTimer, enabled],
+    [clearPullTimer, clearSyncTimer, enabled, t],
   );
 
   const scheduleReload = useCallback(
@@ -475,16 +478,16 @@ export function useCloudTasks(enabled: boolean) {
       setTasks(cloudTasks);
       setStorageError(null);
     } catch (error) {
-      const errorMessage = readRequestErrorMessage(error);
+      const errorMessage = readRequestErrorMessage(error, t);
       setStorageError(
-        errorMessage ? `云端数据同步失败：${errorMessage}，请稍后重试。` : '云端数据同步失败，请稍后重试。',
+        errorMessage ? t('storage.cloudSyncFailedLaterWithMessage', { message: errorMessage }) : t('storage.cloudSyncFailedLater'),
       );
       throw new Error('Cloud sync failed');
     } finally {
       isFlushingRef.current = false;
       setIsFlushing(false);
     }
-  }, [clearPullTimer, clearSyncTimer]);
+  }, [clearPullTimer, clearSyncTimer, t]);
 
   const stats = useMemo(() => {
     const completed = tasks.filter((task) => task.completed).length;

@@ -1,7 +1,7 @@
 {
   "name": "todo-matrix",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Todo Matrix desktop and web app",
   "author": "Todo Matrix Contributors",
   "type": "module",
@@ -54,8 +54,10 @@
     "dotenv": "^17.4.2",
     "echarts": "^5.6.0",
     "express": "^5.2.1",
+    "i18next": "^26.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^17.0.8",
     "zod": "^4.4.3"
   },
   "devDependencies": {

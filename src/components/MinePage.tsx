@@ -35,9 +35,12 @@ import ManageAccountsRoundedIcon from '@mui/icons-material/ManageAccountsRounded
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
 import SystemUpdateRoundedIcon from '@mui/icons-material/SystemUpdateRounded';
+import TranslateRoundedIcon from '@mui/icons-material/TranslateRounded';
 import WifiOffRoundedIcon from '@mui/icons-material/WifiOffRounded';
+import { useTranslation } from 'react-i18next';
 import { InstallPrompt } from './InstallPrompt';
-import { createTaskBackupFile, parseTaskBackup, saveTaskBackupFile } from '../lib/taskBackup';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { TaskBackupParseError, createTaskBackupFile, parseTaskBackup, saveTaskBackupFile } from '../lib/taskBackup';
 import type { MatrixTask } from '../types';
 import type { CurrentUser } from '../types/auth';
 import type { ServerConfig } from '../lib/serverConfig';
@@ -72,13 +75,13 @@ interface SettingsRowProps {
 
 const canShowInstallPrompt = !window.todoMatrixDesktop?.isDesktop && !window.Capacitor?.isNativePlatform?.();
 
-function readRuntimeLabel() {
+function readRuntimeLabel(labels: { android: string; windows: string }) {
   if (window.todoMatrixDesktop?.isDesktop) {
-    return 'Windows 桌面端';
+    return labels.windows;
   }
 
   if (window.Capacitor?.isNativePlatform?.()) {
-    return 'Android 原生端';
+    return labels.android;
   }
 
   return 'Web / PWA';
@@ -102,6 +105,7 @@ export function MinePage({
   tasks,
   user,
 }: MinePageProps) {
+  const { t } = useTranslation();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importCandidate, setImportCandidate] = useState<{
     fileName: string;
@@ -112,7 +116,10 @@ export function MinePage({
     message: string;
     severity: 'error' | 'info' | 'success';
   } | null>(null);
-  const runtimeLabel = readRuntimeLabel();
+  const runtimeLabel = readRuntimeLabel({
+    android: t('settings.androidRuntime'),
+    windows: t('settings.windowsRuntime'),
+  });
   const nativeVersion = readVersion(
     typeof __TODO_MATRIX_NATIVE_VERSION__ === 'undefined' ? undefined : __TODO_MATRIX_NATIVE_VERSION__,
   );
@@ -125,19 +132,19 @@ export function MinePage({
     });
 
     if (file.type === 'empty') {
-      setExportToast({ message: '暂无任务数据可导出', severity: 'info' });
+      setExportToast({ message: t('settings.noTasksToExport'), severity: 'info' });
       return;
     }
 
     try {
-      await saveTaskBackupFile(file);
-      setExportToast({ message: '数据已导出为 JSON 文件', severity: 'success' });
+      await saveTaskBackupFile(file, { title: t('backup.shareTitle') });
+      setExportToast({ message: t('settings.exportSuccess'), severity: 'success' });
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return;
       }
 
-      setExportToast({ message: '数据导出失败，请稍后重试', severity: 'error' });
+      setExportToast({ message: t('settings.exportFailed'), severity: 'error' });
     }
   }
 
@@ -149,8 +156,13 @@ export function MinePage({
         tasks: backup.tasks,
       });
     } catch (error) {
+      const backupErrorMessage =
+        error instanceof TaskBackupParseError
+          ? t(error.code === 'invalid-json' ? 'backup.invalidJson' : 'backup.unsupportedFormat')
+          : null;
+
       setExportToast({
-        message: error instanceof Error ? error.message : '备份文件读取失败',
+        message: backupErrorMessage ?? (error instanceof Error ? error.message : t('settings.readBackupFailed')),
         severity: 'error',
       });
     }
@@ -166,12 +178,12 @@ export function MinePage({
       await onImportTasks(importCandidate.tasks);
       setImportCandidate(null);
       setExportToast({
-        message: `已导入 ${importCandidate.tasks.length} 项任务`,
+        message: t('settings.importedTasks', { count: importCandidate.tasks.length }),
         severity: 'success',
       });
     } catch {
       setExportToast({
-        message: isCloudMode ? '云端数据导入失败，请稍后重试' : '本地数据导入失败，请稍后重试',
+        message: isCloudMode ? t('settings.importCloudFailed') : t('settings.importLocalFailed'),
         severity: 'error',
       });
     } finally {
@@ -190,7 +202,7 @@ export function MinePage({
           textAlign: { xs: 'center', md: 'left' },
         }}
       >
-        设置
+        {t('settings.title')}
       </Typography>
 
       <Box
@@ -218,47 +230,52 @@ export function MinePage({
             <SettingsRow
               icon={AccountCircleRoundedIcon}
               onClick={user ? undefined : onLogin}
-              rightText={user ? '已绑定' : '未登录'}
-              title="账号绑定"
+              rightText={user ? t('settings.bound') : t('settings.unbound')}
+              title={t('settings.account')}
             />
             <SettingsRow
               disabled={!user}
               icon={LockResetRoundedIcon}
               onClick={user ? onChangePassword : undefined}
-              title="修改密码"
+              title={t('settings.changePassword')}
             />
             <SettingsRow
               disabled
               icon={CloudDoneRoundedIcon}
-              rightText={isCloudMode ? '云端模式' : '本地模式'}
-              title="数据模式"
+              rightText={isCloudMode ? t('account.cloudMode') : t('account.localMode')}
+              title={t('settings.dataMode')}
             />
             <SettingsRow
               disabled
               icon={DnsRoundedIcon}
-              rightText={serverConfig.mode === 'custom' ? '自定义服务器' : '默认云接口'}
-              title="服务器"
+              rightText={serverConfig.mode === 'custom' ? t('settings.customServer') : t('settings.defaultServer')}
+              title={t('settings.server')}
             />
+            <LanguageRow />
             <SettingsRow
               icon={FileDownloadRoundedIcon}
               onClick={() => void handleExportData()}
               rightText="JSON"
-              title="导出数据"
+              title={t('settings.exportData')}
             />
             <SettingsRow
               icon={FileUploadRoundedIcon}
               onClick={() => importInputRef.current?.click()}
               rightText="JSON"
-              title="导入数据"
+              title={t('settings.importData')}
             />
           </SettingsGroup>
 
           <SettingsGroup>
-            <SettingsRow icon={DownloadRoundedIcon} onClick={onOpenReleases} title="下载应用" />
+            <SettingsRow icon={DownloadRoundedIcon} onClick={onOpenReleases} title={t('settings.downloadApp')} />
             {canShowInstallPrompt ? <InstallRow runtimeLabel={runtimeLabel} /> : null}
-            <SettingsRow icon={SystemUpdateRoundedIcon} rightText={`Version ${nativeVersion}`} title="版本更新" />
-            <SettingsRow disabled icon={CleaningServicesRoundedIcon} rightText="0.00MB" title="清理缓存" />
-            <SettingsRow icon={InfoRoundedIcon} rightText={runtimeLabel} title="关于 Todo Matrix" />
+            <SettingsRow
+              icon={SystemUpdateRoundedIcon}
+              rightText={t('settings.versionText', { version: nativeVersion })}
+              title={t('settings.versionUpdate')}
+            />
+            <SettingsRow disabled icon={CleaningServicesRoundedIcon} rightText="0.00MB" title={t('settings.clearCache')} />
+            <SettingsRow icon={InfoRoundedIcon} rightText={runtimeLabel} title={t('settings.about')} />
           </SettingsGroup>
 
           {user ? (
@@ -271,7 +288,7 @@ export function MinePage({
                 sx={{ borderRadius: 0, minHeight: 52 }}
                 variant="text"
               >
-                退出登录
+                {t('settings.logout')}
               </Button>
             </Paper>
           ) : null}
@@ -319,16 +336,19 @@ export function MinePage({
           }
         }}
       >
-        <DialogTitle>覆盖并导入数据？</DialogTitle>
+        <DialogTitle>{t('settings.importTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            将从“{importCandidate?.fileName}”导入 {importCandidate?.tasks.length ?? 0} 项任务，并覆盖当前
-            {isCloudMode ? '云端' : '本地'}模式下的全部任务。此操作无法撤销。
+            {t('settings.importDescription', {
+              count: importCandidate?.tasks.length ?? 0,
+              fileName: importCandidate?.fileName,
+              mode: isCloudMode ? t('settings.cloudModeName') : t('settings.localModeName'),
+            })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button disabled={isImporting} onClick={() => setImportCandidate(null)}>
-            取消
+            {t('app.cancel')}
           </Button>
           <Button
             color="error"
@@ -337,7 +357,7 @@ export function MinePage({
             startIcon={isImporting ? <CircularProgress color="inherit" size={16} /> : <FileUploadRoundedIcon />}
             variant="contained"
           >
-            覆盖并导入
+            {t('settings.importAction')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -358,6 +378,8 @@ function ProfilePanel({
   isSyncing: boolean;
   user: CurrentUser | null;
 }) {
+  const { t } = useTranslation();
+
   return (
     <Paper elevation={0} sx={{ bgcolor: 'background.paper', borderRadius: 2, p: { xs: 1.5, sm: 2 } }}>
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', minWidth: 0 }}>
@@ -376,16 +398,16 @@ function ProfilePanel({
         </Avatar>
         <Box sx={{ minWidth: 0 }}>
           <Typography noWrap variant="h2">
-            {user ? user.email : '未登录'}
+            {user ? user.email : t('settings.unbound')}
           </Typography>
           <Typography color="text.secondary" noWrap variant="body2">
-            {isCloudMode ? '云端数据已隔离存储' : '当前使用本地存储'}
+            {isCloudMode ? t('settings.cloudStored') : t('settings.localStored')}
           </Typography>
           <Stack direction="row" spacing={0.75} sx={{ flexWrap: 'wrap', mt: 1 }}>
             <Chip
               color={isCloudMode ? 'primary' : 'default'}
               icon={isCloudMode ? <CloudDoneRoundedIcon /> : <StorageRoundedIcon />}
-              label={isCloudMode ? '云端模式' : '本地模式'}
+              label={isCloudMode ? t('account.cloudMode') : t('account.localMode')}
               size="small"
               variant={isCloudMode ? 'filled' : 'outlined'}
             />
@@ -393,13 +415,13 @@ function ProfilePanel({
               <Chip
                 color="primary"
                 icon={<CircularProgress color="inherit" size={14} />}
-                label="同步中"
+                label={t('settings.syncing')}
                 size="small"
                 variant="outlined"
               />
             ) : null}
             {!isOnline ? (
-              <Chip color="warning" icon={<WifiOffRoundedIcon />} label="离线" size="small" variant="outlined" />
+              <Chip color="warning" icon={<WifiOffRoundedIcon />} label={t('settings.offline')} size="small" variant="outlined" />
             ) : null}
           </Stack>
         </Box>
@@ -418,6 +440,14 @@ function TaskStatsPanel({
     total: number;
   };
 }) {
+  const { t } = useTranslation();
+  const statItems = [
+    [t('stats.all'), stats.total],
+    [t('stats.active'), stats.active],
+    [t('stats.completed'), stats.completed],
+    [t('stats.axis'), stats.shownOnAxis],
+  ] as const;
+
   return (
     <Paper
       elevation={0}
@@ -430,7 +460,7 @@ function TaskStatsPanel({
     >
       <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', mb: 1.5 }}>
         <StorageRoundedIcon color="primary" />
-        <Typography variant="h2">任务数据</Typography>
+        <Typography variant="h2">{t('settings.taskData')}</Typography>
       </Stack>
       <Box
         sx={{
@@ -439,12 +469,7 @@ function TaskStatsPanel({
           gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
         }}
       >
-        {[
-          ['全部', stats.total],
-          ['进行中', stats.active],
-          ['已完成', stats.completed],
-          ['坐标轴', stats.shownOnAxis],
-        ].map(([label, value]) => (
+        {statItems.map(([label, value]) => (
           <Box
             key={label}
             sx={{
@@ -505,7 +530,38 @@ function SettingsRow({ disabled = false, icon: Icon, onClick, rightText, title }
   );
 }
 
+function LanguageRow() {
+  const { t } = useTranslation();
+
+  return (
+    <ListItemButton
+      component="div"
+      disableRipple
+      sx={{
+        cursor: 'default',
+        minHeight: 52,
+        px: { xs: 1.75, sm: 2 },
+        '& + &': {
+          borderTop: 1,
+          borderColor: 'divider',
+        },
+        '&:hover': {
+          bgcolor: 'transparent',
+        },
+      }}
+    >
+      <ListItemIcon sx={{ color: 'text.primary', minWidth: 36 }}>
+        <TranslateRoundedIcon fontSize="small" />
+      </ListItemIcon>
+      <ListItemText primary={t('language.label')} slotProps={{ primary: { sx: { fontWeight: 700 }, variant: 'body2' } }} />
+      <LanguageSwitcher />
+    </ListItemButton>
+  );
+}
+
 function InstallRow({ runtimeLabel }: { runtimeLabel: string }) {
+  const { t } = useTranslation();
+
   return (
     <Box
       sx={{
@@ -523,7 +579,7 @@ function InstallRow({ runtimeLabel }: { runtimeLabel: string }) {
       </ListItemIcon>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography sx={{ fontWeight: 700 }} variant="body2">
-          安装到设备
+          {t('install.title')}
         </Typography>
         <Typography color="text.secondary" noWrap variant="caption">
           {runtimeLabel}

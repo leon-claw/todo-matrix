@@ -11,14 +11,17 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Fab,
   IconButton,
   Paper,
 } from '@mui/material';
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import DeleteSweepRoundedIcon from '@mui/icons-material/DeleteSweepRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import { useTranslation } from 'react-i18next';
 import { AppBottomNavigation } from './components/AppBottomNavigation';
 import { AppHeader } from './components/AppHeader';
 import { AuthPanel } from './components/AuthPanel';
@@ -29,6 +32,7 @@ import { PriorityAxis } from './components/PriorityAxis';
 import { StatsStrip } from './components/StatsStrip';
 import { TaskComposer } from './components/TaskComposer';
 import { TodoList } from './components/TodoList';
+import { LanguageBootstrap } from './i18n/LanguageBootstrap';
 import { useAuth } from './hooks/useAuth';
 import { useCloudTasks } from './hooks/useCloudTasks';
 import { useLocalTasks } from './hooks/useLocalTasks';
@@ -47,6 +51,7 @@ const taskEditorFormId = 'task-editor-form';
 const networkStatusEventName = 'todo-matrix:network-status';
 
 export function App() {
+  const { t } = useTranslation();
   const { serverConfig, setServerConfig } = useServerConfig();
   const {
     authError,
@@ -180,7 +185,7 @@ export function App() {
       await login({ email, password });
       setAuthDialogOpen(false);
     } catch (error) {
-      setAuthError(error instanceof ApiError ? error.message : '登录失败，请检查邮箱和密码。');
+      setAuthError(error instanceof ApiError && error.status === 401 ? t('errors.invalidCredentials') : t('errors.loginFailed'));
       throw error;
     }
   }
@@ -195,9 +200,13 @@ export function App() {
       setAuthDialogOpen(false);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        setAuthError('注册失败，这个邮箱已经被使用。');
+        setAuthError(t('errors.registerEmailUsed'));
+      } else if (error instanceof ApiError && error.message.includes('验证码已过期')) {
+        setAuthError(t('errors.captchaExpired'));
+      } else if (error instanceof ApiError && error.message.includes('验证码不正确')) {
+        setAuthError(t('errors.captchaIncorrect'));
       } else {
-        setAuthError(error instanceof ApiError ? error.message : '注册失败，可能邮箱已被使用或后端暂不可用。');
+        setAuthError(t('errors.registerFailed'));
       }
       throw error;
     }
@@ -226,7 +235,11 @@ export function App() {
       await changePassword({ currentPassword, nextPassword });
       setChangePasswordDialogOpen(false);
     } catch (error) {
-      setChangePasswordError(error instanceof ApiError ? error.message : '修改密码失败，请稍后重试。');
+      setChangePasswordError(
+        error instanceof ApiError && error.status === 401
+          ? t('errors.currentPasswordIncorrect')
+          : t('errors.changePasswordFailed'),
+      );
       throw error;
     } finally {
       setIsPasswordChanging(false);
@@ -303,7 +316,7 @@ export function App() {
               variant="outlined"
               sx={{ bgcolor: 'background.paper' }}
             >
-              {isMobileAxisHidden ? '显示坐标轴' : '隐藏坐标轴'}
+              {isMobileAxisHidden ? t('app.showAxis') : t('app.hideAxis')}
             </Button>
           </Box>
           <Box sx={{ display: isMobileAxisHidden ? { xs: 'none', lg: 'block' } : 'block', minWidth: 0 }}>
@@ -320,7 +333,7 @@ export function App() {
 
         <Box
           component="section"
-          aria-label="TODO 列表"
+          aria-label={t('app.todoList')}
           sx={{
             display: 'grid',
             gap: 1.25,
@@ -349,7 +362,7 @@ export function App() {
                 variant="outlined"
                 sx={{ bgcolor: 'background.paper' }}
               >
-                清除所有已完成
+                {t('app.clearCompleted')}
               </Button>
             </Box>
           ) : null}
@@ -369,7 +382,7 @@ export function App() {
               }}
             >
               <CircularProgress size={20} />
-              正在读取数据...
+              {t('app.loadingData')}
             </Paper>
           ) : (
             <TodoList
@@ -397,6 +410,7 @@ export function App() {
         px: { xs: 1.5, sm: 2.5, md: 3 },
       }}
     >
+      <LanguageBootstrap />
       {activePage === 'home' ? (
         <AppHeader
           hasUser={Boolean(user)}
@@ -410,7 +424,7 @@ export function App() {
 
       {!isOnline ? (
         <Alert severity="warning" variant="filled" sx={{ borderRadius: 2, mb: 2 }}>
-          当前处于离线状态，云端同步会在网络恢复后继续尝试。
+          {t('app.offlineWarning')}
         </Alert>
       ) : null}
 
@@ -443,6 +457,24 @@ export function App() {
         onPageChange={(page) => navigate({ id: page }, 'replace')}
       />
 
+      {activePage === 'home' ? (
+        <Fab
+          aria-label={t('app.addTask')}
+          color="primary"
+          onClick={openCreateTask}
+          sx={{
+            bottom: 'calc(92px + env(safe-area-inset-bottom))',
+            boxShadow: '0 18px 42px rgba(37, 99, 235, 0.34)',
+            display: { xs: 'inline-flex', sm: 'none' },
+            position: 'fixed',
+            right: 18,
+            zIndex: (theme) => theme.zIndex.appBar + 2,
+          }}
+        >
+          <AddRoundedIcon />
+        </Fab>
+      ) : null}
+
       <Dialog
         fullWidth
         maxWidth="sm"
@@ -451,7 +483,7 @@ export function App() {
         slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <IconButton
-          aria-label="关闭"
+          aria-label={t('app.close')}
           onClick={() => setAuthDialogOpen(false)}
           sx={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
         >
@@ -484,15 +516,15 @@ export function App() {
         }}
         role="alertdialog"
       >
-        <DialogTitle id="logout-confirm-title">退出登录？</DialogTitle>
+        <DialogTitle id="logout-confirm-title">{t('app.logoutTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            退出后将切换回本地模式，当前账号的云端任务仍会保留。
+            {t('app.logoutDescription')}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button disabled={isLoggingOut} onClick={() => setLogoutConfirmOpen(false)}>
-            取消
+            {t('app.cancel')}
           </Button>
           <Button
             color="error"
@@ -501,7 +533,7 @@ export function App() {
             startIcon={isLoggingOut ? <CircularProgress color="inherit" size={16} /> : undefined}
             variant="contained"
           >
-            确认退出
+            {t('app.confirmLogout')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -514,7 +546,7 @@ export function App() {
         slotProps={{ paper: { sx: { borderRadius: 3 } } }}
       >
         <IconButton
-          aria-label="关闭"
+          aria-label={t('app.close')}
           onClick={() => setChangePasswordDialogOpen(false)}
           sx={{ position: 'absolute', right: 12, top: 12, zIndex: 1 }}
         >
@@ -565,8 +597,8 @@ export function App() {
             zIndex: 2,
           }}
         >
-          {editorState?.mode === 'create' ? '添加任务' : '编辑任务'}
-          <IconButton aria-label="关闭" onClick={closeEditor} size="small">
+          {editorState?.mode === 'create' ? t('app.addTask') : t('app.editTask')}
+          <IconButton aria-label={t('app.close')} onClick={closeEditor} size="small">
             <CloseRoundedIcon fontSize="small" />
           </IconButton>
         </DialogTitle>
@@ -593,7 +625,7 @@ export function App() {
           }}
         >
           <Button onClick={closeEditor} type="button" variant="outlined">
-            取消
+            {t('app.cancel')}
           </Button>
           <Button
             disableElevation
@@ -602,41 +634,41 @@ export function App() {
             type="submit"
             variant="contained"
           >
-            {editorState?.mode === 'create' ? '添加任务' : '保存修改'}
+            {editorState?.mode === 'create' ? t('app.addTask') : t('app.saveChanges')}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>确认删除任务？</DialogTitle>
+        <DialogTitle>{t('app.deleteTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            删除后将移除“{deleteTarget?.title}”。这个操作无法撤销。
+            {t('app.deleteDescription', { title: deleteTarget?.title ?? '' })}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteTarget(null)} variant="outlined">
-            取消
+            {t('app.cancel')}
           </Button>
           <Button color="error" onClick={confirmDeleteTask} variant="contained">
-            确认删除
+            {t('app.confirmDelete')}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={clearCompletedDialogOpen} onClose={() => setClearCompletedDialogOpen(false)}>
-        <DialogTitle>清除所有已完成？</DialogTitle>
+        <DialogTitle>{t('app.clearCompletedTitle')}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            将清除当前列表中所有已完成 Todo。这个操作无法撤销。
+            {t('app.clearCompletedDescription')}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setClearCompletedDialogOpen(false)} variant="outlined">
-            取消
+            {t('app.cancel')}
           </Button>
           <Button color="error" onClick={confirmClearCompletedTasks} variant="contained">
-            清除已完成
+            {t('app.clearCompleted')}
           </Button>
         </DialogActions>
       </Dialog>
@@ -670,10 +702,10 @@ export function App() {
         >
           <CircularProgress size={30} thickness={4} />
           <Box component="strong" sx={{ fontSize: 17, lineHeight: 1.35 }}>
-            正在同步云端待办
+            {t('app.syncingCloudTasks')}
           </Box>
           <Box component="span" sx={{ color: 'text.secondary', fontSize: 14, lineHeight: 1.6 }}>
-            正在努力拉取数据
+            {t('app.pullingData')}
           </Box>
         </Paper>
       </Backdrop>

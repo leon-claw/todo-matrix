@@ -3,6 +3,7 @@ import BarChartRoundedIcon from '@mui/icons-material/BarChartRounded';
 import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import RadioButtonUncheckedRoundedIcon from '@mui/icons-material/RadioButtonUncheckedRounded';
 import ScatterPlotRoundedIcon from '@mui/icons-material/ScatterPlotRounded';
+import { useTranslation } from 'react-i18next';
 import type { TaskFilter } from '../types';
 
 interface StatsStripProps {
@@ -17,12 +18,12 @@ interface StatsStripProps {
 const filterOptions: Array<{
   icon: typeof BarChartRoundedIcon;
   id: TaskFilter;
-  label: string;
+  labelKey: string;
 }> = [
-  { id: 'all', label: '全部', icon: BarChartRoundedIcon },
-  { id: 'active', label: '进行中', icon: RadioButtonUncheckedRoundedIcon },
-  { id: 'completed', label: '已完成', icon: CheckRoundedIcon },
-  { id: 'axis', label: '坐标轴', icon: ScatterPlotRoundedIcon },
+  { id: 'all', labelKey: 'stats.all', icon: BarChartRoundedIcon },
+  { id: 'active', labelKey: 'stats.active', icon: RadioButtonUncheckedRoundedIcon },
+  { id: 'completed', labelKey: 'stats.completed', icon: CheckRoundedIcon },
+  { id: 'axis', labelKey: 'stats.axis', icon: ScatterPlotRoundedIcon },
 ];
 
 export function StatsStrip({
@@ -33,6 +34,7 @@ export function StatsStrip({
   shownOnAxis,
   total,
 }: StatsStripProps) {
+  const { t } = useTranslation();
   const counts: Record<TaskFilter, number> = {
     all: total,
     active,
@@ -41,7 +43,7 @@ export function StatsStrip({
   };
 
   return (
-    <Box aria-label="任务筛选" component="section">
+    <Box aria-label={t('stats.filterLabel')} component="section">
       <ToggleButtonGroup
         exclusive
         fullWidth
@@ -110,7 +112,7 @@ export function StatsStrip({
                     sx={{ display: 'block', fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis' }}
                     variant="caption"
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </Typography>
                 </Box>
               </Stack>

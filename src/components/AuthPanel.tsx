@@ -17,6 +17,7 @@ import DnsRoundedIcon from '@mui/icons-material/DnsRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import PersonAddAltRoundedIcon from '@mui/icons-material/PersonAddAltRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import { useTranslation } from 'react-i18next';
 import { apiRequest, checkApiHealth } from '../lib/apiClient';
 import {
   DEFAULT_OFFICIAL_API_BASE,
@@ -61,6 +62,7 @@ export function AuthPanel({
   onServerConfigChange,
   serverConfig,
 }: AuthPanelProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -108,11 +110,11 @@ export function AuthPanel({
       setCaptcha(response.captcha);
       setCaptchaAnswer('');
     } catch {
-      setLocalError('验证码加载失败，请稍后重试。');
+      setLocalError(t('auth.captchaLoadFailed'));
     } finally {
       setIsCaptchaLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (mode === 'register' && !serverNeedsApply) {
@@ -124,7 +126,7 @@ export function AuthPanel({
     setLocalError(null);
 
     if (!selectedServerConfig) {
-      setLocalError('请输入有效的自定义服务器地址。');
+      setLocalError(t('auth.invalidServerUrl'));
       return null;
     }
 
@@ -136,7 +138,7 @@ export function AuthPanel({
 
       return onServerConfigChange(selectedServerConfig);
     } catch {
-      setLocalError('服务器连接失败，请确认地址正确，并且后端 /api/health 可以访问。');
+      setLocalError(t('auth.serverCheckFailed'));
       return null;
     } finally {
       setIsServerChecking(false);
@@ -155,7 +157,7 @@ export function AuthPanel({
 
     if (mode === 'register') {
       await refreshCaptcha();
-      setLocalError('服务器已切换，请输入新的验证码后继续注册。');
+      setLocalError(t('auth.serverSwitched'));
       return false;
     }
 
@@ -167,12 +169,12 @@ export function AuthPanel({
     setLocalError(null);
 
     if (!EMAIL_PATTERN.test(normalizedEmail)) {
-      setLocalError('请输入有效的邮箱地址。');
+      setLocalError(t('auth.invalidEmail'));
       return;
     }
 
     if (password.length < 8) {
-      setLocalError('密码至少需要 8 位。');
+      setLocalError(t('auth.passwordMin'));
       return;
     }
 
@@ -185,7 +187,7 @@ export function AuthPanel({
         await onLogin(normalizedEmail, password);
       } else {
         if (!captcha || !captchaAnswer.trim()) {
-          setLocalError('请输入图片验证码。');
+          setLocalError(t('auth.captchaRequired'));
           return;
         }
         await onRegister(normalizedEmail, password, {
@@ -211,9 +213,9 @@ export function AuthPanel({
   return (
     <Stack component="form" spacing={2.25} onSubmit={handleSubmit}>
       <Box>
-        <Typography variant="h2">{mode === 'login' ? '登录云端账号' : '注册云端账号'}</Typography>
+        <Typography variant="h2">{mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')}</Typography>
         <Typography color="text.secondary" variant="body2">
-          可使用默认云接口，也可以连接自己的私有化服务器。
+          {t('auth.subtitle')}
         </Typography>
       </Box>
 
@@ -229,13 +231,13 @@ export function AuthPanel({
         size="small"
         value={mode}
       >
-        <ToggleButton value="login">登录</ToggleButton>
-        <ToggleButton value="register">注册</ToggleButton>
+        <ToggleButton value="login">{t('account.login')}</ToggleButton>
+        <ToggleButton value="register">{t('auth.register')}</ToggleButton>
       </ToggleButtonGroup>
 
       <Stack spacing={1.25}>
         <Typography sx={{ fontWeight: 800 }} variant="body2">
-          服务器
+          {t('auth.server')}
         </Typography>
         <ToggleButtonGroup
           exclusive
@@ -251,26 +253,26 @@ export function AuthPanel({
         >
           <ToggleButton value="official">
             <CloudQueueRoundedIcon fontSize="small" sx={{ mr: 0.75 }} />
-            默认云接口
+            {t('auth.officialServer')}
           </ToggleButton>
           <ToggleButton value="custom">
             <DnsRoundedIcon fontSize="small" sx={{ mr: 0.75 }} />
-            自定义服务器
+            {t('auth.customServer')}
           </ToggleButton>
         </ToggleButtonGroup>
 
         {serverMode === 'custom' ? (
           <TextField
             fullWidth
-            helperText="例如：https://todo.example.com 或 https://todo.example.com/api"
-            label="服务器地址"
+            helperText={t('auth.serverUrlExample')}
+            label={t('auth.serverUrl')}
             onChange={(event) => setCustomServerUrl(event.target.value)}
             placeholder="https://todo.example.com"
             value={customServerUrl}
           />
         ) : (
           <Typography color="text.secondary" variant="caption">
-            当前默认：{getRuntimeOfficialApiBase() || DEFAULT_OFFICIAL_API_BASE}
+            {t('auth.currentDefault', { url: getRuntimeOfficialApiBase() || DEFAULT_OFFICIAL_API_BASE })}
           </Typography>
         )}
 
@@ -282,7 +284,7 @@ export function AuthPanel({
             type="button"
             variant="outlined"
           >
-            {serverMode === 'custom' ? '测试并使用服务器' : '使用默认云接口'}
+            {serverMode === 'custom' ? t('auth.testAndUseServer') : t('auth.useDefaultServer')}
           </Button>
         ) : null}
       </Stack>
@@ -294,8 +296,8 @@ export function AuthPanel({
         autoFocus
         error={emailError}
         fullWidth
-        helperText={emailError ? '邮箱格式不正确' : ' '}
-        label="邮箱"
+        helperText={emailError ? t('auth.emailFormatInvalid') : ' '}
+        label={t('auth.email')}
         onChange={(event) => setEmail(event.target.value)}
         required
         slotProps={{
@@ -310,8 +312,8 @@ export function AuthPanel({
       <TextField
         autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
         fullWidth
-        helperText="至少 8 位"
-        label="密码"
+        helperText={t('auth.passwordHelper')}
+        label={t('auth.password')}
         onChange={(event) => setPassword(event.target.value)}
         required
         type="password"
@@ -322,7 +324,7 @@ export function AuthPanel({
         <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center' }}>
           <Box
             component="img"
-            alt="图片验证码"
+            alt={t('auth.captchaAlt')}
             src={captcha?.image}
             sx={{
               bgcolor: 'grey.100',
@@ -335,7 +337,7 @@ export function AuthPanel({
             }}
           />
           <IconButton
-            aria-label="刷新验证码"
+            aria-label={t('auth.refreshCaptcha')}
             disabled={isCaptchaLoading || serverNeedsApply}
             onClick={refreshCaptcha}
             type="button"
@@ -346,7 +348,7 @@ export function AuthPanel({
             autoComplete="off"
             disabled={serverNeedsApply}
             fullWidth
-            label="验证码"
+            label={t('auth.captcha')}
             onChange={(event) => setCaptchaAnswer(event.target.value.toUpperCase())}
             required
             value={captchaAnswer}
@@ -363,7 +365,7 @@ export function AuthPanel({
         type="submit"
         variant="contained"
       >
-        {mode === 'login' ? '登录' : '注册并登录'}
+        {mode === 'login' ? t('account.login') : t('auth.registerAndLogin')}
       </Button>
     </Stack>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
-import { content } from '../utils/mdxParser';
-import { Download, Monitor, Smartphone, Globe, CloudLightning, ShieldCheck, ArrowRight, AppWindow } from 'lucide-react';
+import { Monitor, Smartphone, Globe, CloudLightning, ShieldCheck, ArrowRight, AppWindow } from 'lucide-react';
 import { TODO_MATRIX_APP_URL, TODO_MATRIX_RELEASES_URL } from '../config/urls';
+import { useSiteContent } from '../i18n/content';
 
 interface Platform {
   name: string;
@@ -14,6 +14,7 @@ interface Platform {
 }
 
 export default function Installer() {
+  const content = useSiteContent();
   const icons = [
     <Globe className="w-5 h-5 text-blue-600" />,
     <Monitor className="w-5 h-5 text-emerald-600" />,
@@ -56,16 +57,16 @@ export default function Installer() {
             <div className="flex items-start space-x-2.5">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <span className="text-xs font-bold text-gray-800 block">安全无感，离线高可用</span>
-                <p className="text-[11px] text-gray-500 leading-normal">断网或差网环境，依旧可以本地无阻拖拽，待重新上线自动执行高频率合并算法。</p>
+                <span className="text-xs font-bold text-gray-800 block">{content.ui.installer.points[0]?.title}</span>
+                <p className="text-[11px] text-gray-500 leading-normal">{content.ui.installer.points[0]?.desc}</p>
               </div>
             </div>
             
             <div className="flex items-start space-x-2.5">
               <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <span className="text-xs font-bold text-gray-800 block">轻量不臃肿</span>
-                <p className="text-[11px] text-gray-500 leading-normal">客户端体积控制在20MB以下，不抢占系统多余内存，时刻做你最乖巧的算力工具。</p>
+                <span className="text-xs font-bold text-gray-800 block">{content.ui.installer.points[1]?.title}</span>
+                <p className="text-[11px] text-gray-500 leading-normal">{content.ui.installer.points[1]?.desc}</p>
               </div>
             </div>
           </div>

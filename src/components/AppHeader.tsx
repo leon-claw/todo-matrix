@@ -3,6 +3,7 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
 import LoginRoundedIcon from '@mui/icons-material/LoginRounded';
 import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
+import { useTranslation } from 'react-i18next';
 import { getHeaderAccountState } from '../lib/headerAccountState';
 
 interface AppHeaderProps {
@@ -22,12 +23,15 @@ export function AppHeader({
   onCreateTask,
   onLogin,
 }: AppHeaderProps) {
+  const { t } = useTranslation();
   const accountState = getHeaderAccountState({
     hasUser,
     isAuthLoading,
     isCloudMode,
     isSyncing,
   });
+  const accountLabel =
+    accountState.kind === 'login' ? t('account.login') : isCloudMode ? t('account.cloudMode') : t('account.localMode');
 
   return (
     <Box
@@ -43,10 +47,10 @@ export function AppHeader({
       }}
     >
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={{ xs: 1.25, sm: 2 }}
+        direction="row"
+        spacing={{ xs: 1, sm: 2 }}
         sx={{
-          alignItems: { xs: 'stretch', sm: 'center' },
+          alignItems: 'center',
           justifyContent: 'space-between',
           minWidth: 0,
         }}
@@ -57,7 +61,7 @@ export function AppHeader({
           sx={{
             alignItems: 'center',
             minWidth: 0,
-            width: { xs: '100%', sm: 'auto' },
+            flex: '1 1 auto',
           }}
         >
           <Box
@@ -88,7 +92,7 @@ export function AppHeader({
                 },
               }}
             >
-              基于艾森豪威尔方法论的待办小工具
+              {t('app.tagline')}
             </Typography>
           </Box>
         </Stack>
@@ -98,29 +102,27 @@ export function AppHeader({
           spacing={0.75}
           sx={{
             alignItems: 'center',
-            display: { xs: 'grid', sm: 'flex' },
+            display: 'flex',
             flex: '0 0 auto',
-            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'none' },
-            width: { xs: '100%', sm: 'auto' },
           }}
         >
           {onCreateTask ? (
             <Button
-              aria-label="添加任务"
+              aria-label={t('app.addTask')}
               disableElevation
               onClick={onCreateTask}
               startIcon={<AddRoundedIcon />}
               type="button"
               variant="contained"
               sx={{
+                display: { xs: 'none', sm: 'inline-flex' },
                 flex: '0 0 auto',
-                height: { xs: 42, sm: 36.5 },
-                minWidth: { xs: 0, sm: 96 },
-                px: { xs: 1.5, sm: 1.75 },
-                width: { xs: '100%', sm: 'auto' },
+                height: 36.5,
+                minWidth: 96,
+                px: 1.75,
               }}
             >
-              添加任务
+              {t('app.addTask')}
             </Button>
           ) : null}
 
@@ -130,7 +132,7 @@ export function AppHeader({
               onClick={onLogin}
               startIcon={
                 accountState.loading ? (
-                  <CircularProgress aria-label="登录状态加载中" color="inherit" size={14} />
+                  <CircularProgress aria-label={t('account.login')} color="inherit" size={14} />
                 ) : (
                   <LoginRoundedIcon />
                 )
@@ -141,31 +143,42 @@ export function AppHeader({
                 flex: '0 0 auto',
                 height: { xs: 42, sm: 36.5 },
                 minWidth: { xs: 0, sm: 82 },
-                width: { xs: '100%', sm: 'auto' },
+                px: { xs: 1.25, sm: 1.75 },
+                whiteSpace: 'nowrap',
               }}
             >
-              {accountState.label}
+              {accountLabel}
             </Button>
           ) : (
             <Chip
               color={isCloudMode ? 'primary' : 'default'}
               icon={
                 accountState.loading ? (
-                  <CircularProgress aria-label="同步中" color="inherit" size={14} />
+                  <CircularProgress aria-label={t('settings.syncing')} color="inherit" size={14} />
                 ) : isCloudMode ? (
                   <CloudDoneRoundedIcon />
                 ) : (
                   <StorageRoundedIcon />
                 )
               }
-              label={accountState.label}
+              label={accountLabel}
               size="small"
               variant={isCloudMode ? 'filled' : 'outlined'}
               sx={{
+                '& .MuiChip-icon': {
+                  ml: { xs: 0, sm: 0.5 },
+                  mr: { xs: 0, sm: -0.5 },
+                },
+                '& .MuiChip-label': {
+                  display: { xs: 'none', sm: 'block' },
+                  px: { xs: 0, sm: 1 },
+                },
                 fontWeight: 700,
                 height: { xs: 42, sm: 32 },
                 justifyContent: 'center',
-                width: { xs: '100%', sm: 'auto' },
+                minWidth: { xs: 42, sm: 0 },
+                px: { xs: 0, sm: 0.25 },
+                width: { xs: 42, sm: 'auto' },
               }}
             />
           )}
