@@ -113,3 +113,18 @@ npm run build
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+## Troubleshooting
+
+### macOS — 应用提示已损坏，无法打开
+
+本地构建的 DMG **没有 Apple Developer 证书签名**，macOS Gatekeeper 会拦截。解决方法：
+
+1. **右键 → 打开**（不要双击），在弹出的对话框点「打开」，一次放行即可。
+2. 或终端清除隔离标记：
+
+```bash
+xattr -d com.apple.quarantine "/Applications/Todo Matrix.app"
+```
+
+> 如果应用不在 Applications 文件夹，替换成实际路径即可。
+
